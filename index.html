@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>לוח שנה חודשי</title>
+    <meta name="theme-color" content="#130a1e" />
+    <link rel="manifest" href="./manifest.json" />
+    <link rel="icon" href="./icon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="./icon.svg" />
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <div class="app">
+      <header class="header">
+        <div class="brand">
+          <div class="logo" aria-hidden="true">🗓️</div>
+          <div class="titles">
+            <h1 class="title">לוח שנה חודשי</h1>
+            <p class="subtitle">ניווט בין חודשים, תצוגת Grid, והדגשת היום הנוכחי</p>
+          </div>
+        </div>
+      </header>
+
+      <main class="main">
+        <section class="panel">
+          <div class="toolbar">
+            <button id="prev-month" class="iconbtn" type="button" aria-label="חודש קודם">❮</button>
+            <div class="monthtitle" aria-live="polite">
+              <div id="month-label" class="monthtitle__main">—</div>
+              <div id="month-heb" class="monthtitle__heb">—</div>
+              <div id="month-sub" class="monthtitle__sub">—</div>
+            </div>
+            <button id="next-month" class="iconbtn" type="button" aria-label="חודש הבא">❯</button>
+            <button id="settings-btn" class="iconbtn" type="button" aria-label="הגדרות">⚙️</button>
+          </div>
+
+          <div class="calendar" role="grid" aria-label="לוח שנה חודשי">
+            <div class="dow" role="row">
+              <div class="dow__cell" role="columnheader">א׳</div>
+              <div class="dow__cell" role="columnheader">ב׳</div>
+              <div class="dow__cell" role="columnheader">ג׳</div>
+              <div class="dow__cell" role="columnheader">ד׳</div>
+              <div class="dow__cell" role="columnheader">ה׳</div>
+              <div class="dow__cell" role="columnheader">ו׳</div>
+              <div class="dow__cell" role="columnheader">ש׳</div>
+            </div>
+
+            <div id="grid" class="grid" role="rowgroup"></div>
+          </div>
+
+          <div class="drawer" aria-label="כלים">
+            <div class="drawer__row">
+              <div class="drawer__title">רישום יום/לילה וחישובים</div>
+              <div class="drawer__hint">
+                לחיצה על יום פותחת חלונית לבחירה <strong>יום</strong> או <strong>לילה</strong>. לחיצה על יום שכבר סומן תציע
+                מחיקה. נשמר מקומית בדפדפן.
+              </div>
+            </div>
+
+            <div class="drawer__row drawer__row--controls">
+              <button id="export-ics" class="btn btn--primary" type="button">ייצוא ליומן (ICS)</button>
+              <button id="clear-all" class="btn btn--ghost" type="button">נקה הכל</button>
+            </div>
+
+            <div class="drawer__row">
+              <div class="drawer__title">מיקום לזמני יום</div>
+              <div class="location-row">
+                <select id="city-select" class="select" aria-label="בחרי עיר">
+                  <option value="">— בחרי עיר —</option>
+                  <option value="31.7683,35.2137">ירושלים</option>
+                  <option value="32.0853,34.7818">תל אביב</option>
+                  <option value="32.7940,34.9896">חיפה</option>
+                  <option value="31.2518,34.7913">באר שבע</option>
+                  <option value="29.5577,34.9519">אילת</option>
+                </select>
+                <button id="locate-btn" class="btn btn--ghost" type="button">📍 זהה מיקום</button>
+              </div>
+              <div id="location-status" class="location-status">ירושלים</div>
+            </div>
+
+            <div class="drawer__row">
+              <div id="calc-summary" class="summary">לחצי על תאריך כדי לרשום יום/לילה. החישובים יוצגו ויסומנו בלוח.</div>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <footer class="footer">
+        <div class="footer__note">טיפ: ניווט במקלדת — → חודש קודם, ← חודש הבא.</div>
+        <div class="footer__memorial">לע״נ אסתר בת חנה ז״ל</div>
+      </footer>
+    </div>
+
+    <div id="popover" class="popover" hidden role="dialog" aria-modal="false" aria-labelledby="popover-title">
+      <div class="popover__card">
+        <div class="popover__header">
+          <div id="popover-title" class="popover__title">—</div>
+          <button class="popover__x" type="button" aria-label="סגירה" data-popover-close="1">✕</button>
+        </div>
+        <div id="popover-body" class="popover__body"></div>
+        <div id="popover-actions" class="popover__actions"></div>
+      </div>
+    </div>
+
+    <!-- Modal הגדרות -->
+    <div id="settings-modal" class="modal" hidden role="dialog" aria-modal="true" aria-labelledby="settings-modal-title">
+      <div class="modal__backdrop" id="settings-backdrop"></div>
+      <div class="modal__card">
+        <div class="modal__header">
+          <div id="settings-modal-title" class="modal__title">⚙️ הגדרות</div>
+          <button class="modal__x" type="button" aria-label="סגירה" id="settings-close">✕</button>
+        </div>
+        <div class="modal__body">
+
+          <!-- אור זרוע -->
+          <div class="setting-row">
+            <div class="setting-label">
+              <div class="setting-name">אור זרוע</div>
+              <div class="setting-desc">סמני עונת אור זרוע (לילה/יום שלפני כל פרישה)</div>
+            </div>
+            <button id="oz-toggle" class="toggle-btn" role="switch" aria-checked="false" type="button" aria-label="הפעל אור זרוע">
+              <span class="toggle-btn__knob"></span>
+            </button>
+          </div>
+
+          <!-- חומרת יום לא -->
+          <div class="setting-row">
+            <div class="setting-label">
+              <div class="setting-name">חומרת יום ל״א</div>
+              <div class="setting-desc">סמני גם את יום 31 (בנוסף ליום 30)</div>
+            </div>
+            <button id="day31-toggle" class="toggle-btn" role="switch" aria-checked="false" type="button" aria-label="הפעל חומרת יום 31">
+              <span class="toggle-btn__knob"></span>
+            </button>
+          </div>
+
+          <!-- עונה בינונית כיממה שלמה -->
+          <div class="setting-row">
+            <div class="setting-label">
+              <div class="setting-name">עונה בינונית כיממה שלמה</div>
+              <div class="setting-desc">פרישה גם ביום וגם בלילה של יום 30 (ו-31)</div>
+            </div>
+            <button id="full-day-toggle" class="toggle-btn" role="switch" aria-checked="false" type="button" aria-label="הפעל יממה שלמה">
+              <span class="toggle-btn__knob"></span>
+            </button>
+          </div>
+
+          <!-- ערכת נושא -->
+          <div class="setting-row">
+            <div class="setting-label">
+              <div class="setting-name">עיצוב רקע</div>
+              <div class="setting-desc">בחרי את מראה האפליקציה</div>
+            </div>
+            <select id="theme-select" class="select select--small" aria-label="עיצוב רקע">
+              <option value="dark">כהה</option>
+              <option value="light">בהיר</option>
+              <option value="floral">פרחוני 🌸</option>
+            </select>
+          </div>
+
+          <!-- התראות קופצות -->
+          <div class="setting-row">
+            <div class="setting-label">
+              <div class="setting-name">התראות קופצות</div>
+              <div class="setting-desc">תזכורת ביום שיש עונת פרישה</div>
+            </div>
+            <button id="notifications-toggle" class="toggle-btn" role="switch" aria-checked="false" type="button" aria-label="הפעל התראות">
+              <span class="toggle-btn__knob"></span>
+            </button>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@hebcal/core@6.0.8/dist/bundle.min.js"></script>
+    <script src="./app.js"></script>
+  </body>
+</html>

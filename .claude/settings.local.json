@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(export PATH=\"/usr/local/bin:/opt/homebrew/bin:$PATH\")",
+      "Read(//usr/local/bin/**)",
+      "Read(//Users/yhg/.nvm/versions/**)",
+      "Bash(git --version)",
+      "Bash(gh --version)",
+      "Bash(brew install:*)"
+    ]
+  }
+}
