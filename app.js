@@ -441,7 +441,7 @@ function getSortedEntries() {
     const dt = parseIsoKey(iso);
     if (dt) list.push({ iso, date: dt, tod: rec.tod, updatedAt: Number(rec.updatedAt) || 0 });
   }
-  return list.sort((a, b) => b.updatedAt - a.updatedAt);
+  return list.sort((a, b) => b.date - a.date);
 }
 function adjustForNight(date, tod) {
   return tod !== "night" ? date : new Date(date.getFullYear(), date.getMonth(), date.getDate() + 1);
