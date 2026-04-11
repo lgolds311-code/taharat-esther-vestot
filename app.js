@@ -314,7 +314,7 @@ function saveJson(key, value) {
 // ─────────────────────────────────────────────────────────────────────────────
 // Settings
 // ─────────────────────────────────────────────────────────────────────────────
-const DEFAULT_SETTINGS = { ozEnabled: false, day31Enabled: false, fullDayEnabled: false, theme: "dark", notificationsEnabled: false };
+const DEFAULT_SETTINGS = { ozEnabled: false, day31Enabled: false, fullDayEnabled: false, theme: "light", notificationsEnabled: false };
 
 function loadSettings() {
   return { ...DEFAULT_SETTINGS, ...loadJson(STORAGE.settings, {}) };
@@ -389,9 +389,13 @@ function positionPopover() {
   card.style.top  = `${Math.round(top)}px`;
 }
 
-function openPopover({ title, bodyText, actions, anchorRect }) {
+function openPopover({ title, bodyText, bodyHTML, actions, anchorRect }) {
   els.popoverTitle.textContent = title || "";
-  els.popoverBody.textContent  = bodyText || "";
+  if (bodyHTML) {
+    els.popoverBody.innerHTML = bodyHTML;
+  } else {
+    els.popoverBody.textContent  = bodyText || "";
+  }
   els.popoverActions.innerHTML = "";
   popoverAnchorRect = anchorRect || null;
   for (const a of actions || []) {
@@ -399,7 +403,8 @@ function openPopover({ title, bodyText, actions, anchorRect }) {
     btn.type = "button";
     btn.className = a.className || "btn";
     btn.textContent = a.label;
-    btn.addEventListener("click", () => { closePopover(); a.onClick?.(); });
+    // onClick רץ לפני closePopover כדי לאפשר קריאת ערכי textarea
+    btn.addEventListener("click", () => { a.onClick?.(); closePopover(); });
     els.popoverActions.appendChild(btn);
   }
   els.popover.hidden = false;
@@ -683,6 +688,12 @@ function buildCell({ date, muted, today, marks }) {
     const st = document.createElement("div");
     st.className   = "cell__status cell__status--" + status;
     st.textContent = status === "night" ? "לילה" : "יום";
+    if (state.entries[key]?.feelings) {
+      const dot = document.createElement("span");
+      dot.className = "cell__feelings-dot";
+      dot.title = state.entries[key].feelings;
+      st.appendChild(dot);
+    }
     cell.appendChild(st);
   }
 
@@ -694,10 +705,14 @@ function buildCell({ date, muted, today, marks }) {
     const anchor   = cell.getBoundingClientRect();
 
     if (existing) {
-      // ── מחיקה ──
+      // ── מחיקה / עריכה ──
+      const existingFeelings = state.entries[key]?.feelings || "";
+      const feelingsHtml = existingFeelings
+        ? `<div class="popover__feelings-view">${existingFeelings.replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/\n/g,"<br>")}</div>`
+        : "";
       openPopover({
         title: "מחיקה",
-        bodyText: `${title}\nמסומן כ־${existing === "night" ? "לילה" : "יום"}.\nלמחוק את הרישום?`,
+        bodyHTML: `<div class="popover__info">${title}<br>מסומן כ־${existing === "night" ? "לילה" : "יום"}.</div>${feelingsHtml}<div class="popover__question">למחוק את הרישום?</div>`,
         actions: [
           {
             label: "כן, למחוק", className: "btn btn--danger",
@@ -732,12 +747,13 @@ function buildCell({ date, muted, today, marks }) {
 
       openPopover({
         title,
-        bodyText: `☀️ זריחה: ${srStr}   🌇 שקיעה: ${ssStr}\n\nאיך לסמן?`,
+        bodyHTML: `<div class="popover__times">☀️ זריחה: ${srStr}&nbsp;&nbsp;&nbsp;🌇 שקיעה: ${ssStr}</div><label class="popover__feelings-label">הרגשות גוף (אופציונלי)<textarea class="popover__feelings-input" placeholder="למשל: כאב ראש, עייפות, כאבי בטן..."></textarea></label><div class="popover__question">איך לסמן?</div>`,
         actions: [
           {
             label: "יום ☀️", className: dayClass,
             onClick: () => {
-              state.entries[key] = { tod: "day", updatedAt: Date.now() };
+              const feelings = els.popoverBody.querySelector(".popover__feelings-input")?.value?.trim() || "";
+              state.entries[key] = { tod: "day", updatedAt: Date.now(), ...(feelings && { feelings }) };
               saveJson(STORAGE.entries, state.entries);
               renderMonth();
             },
@@ -745,7 +761,8 @@ function buildCell({ date, muted, today, marks }) {
           {
             label: "לילה 🌙", className: nightClass,
             onClick: () => {
-              state.entries[key] = { tod: "night", updatedAt: Date.now() };
+              const feelings = els.popoverBody.querySelector(".popover__feelings-input")?.value?.trim() || "";
+              state.entries[key] = { tod: "night", updatedAt: Date.now(), ...(feelings && { feelings }) };
               saveJson(STORAGE.entries, state.entries);
               renderMonth();
             },
@@ -1004,8 +1021,8 @@ if (els.notificationsToggle  && state.settings.notificationsEnabled
 }
 
 // החל ערכת נושא שמורה
-applyTheme(state.settings.theme || "dark");
-if (els.themeSelect) els.themeSelect.value = state.settings.theme || "dark";
+applyTheme(state.settings.theme || "light");
+if (els.themeSelect) els.themeSelect.value = state.settings.theme || "light";
 
 // הצג סטטוס מיקום
 const initLoc = loadLocation();

@@ -258,6 +258,19 @@ body {
   color: #f3e8ff;
 }
 
+.cell__feelings-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.7;
+  margin-right: 4px;
+  vertical-align: middle;
+  position: relative;
+  top: -1px;
+}
+
 .cell__mark {
   font-size: 10px;
   color: #fdf4ff;
@@ -485,6 +498,63 @@ body {
   font-size: 13px;
   line-height: 1.55;
   white-space: pre-line;
+}
+
+.popover__times {
+  margin-bottom: 10px;
+  white-space: nowrap;
+}
+
+.popover__question {
+  margin-top: 8px;
+  font-weight: 600;
+}
+
+.popover__feelings-label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.7);
+  margin-top: 10px;
+}
+
+.popover__feelings-input {
+  width: 100%;
+  min-height: 60px;
+  padding: 7px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.2);
+  background: rgba(255,255,255,0.08);
+  color: inherit;
+  font-family: var(--font);
+  font-size: 13px;
+  line-height: 1.45;
+  resize: vertical;
+  outline: none;
+  direction: rtl;
+}
+.popover__feelings-input:focus {
+  border-color: var(--brand);
+  background: rgba(255,255,255,0.12);
+}
+.popover__feelings-input::placeholder {
+  color: rgba(255,255,255,0.38);
+}
+
+.popover__info {
+  margin-bottom: 4px;
+}
+
+.popover__feelings-view {
+  margin: 8px 0;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.13);
+  font-size: 13px;
+  line-height: 1.5;
+  white-space: normal;
 }
 
 .popover__actions {
@@ -856,6 +926,11 @@ body.theme-light .popover__card {
 body.theme-light .popover__header { border-bottom-color: rgba(147, 51, 234, 0.15); }
 body.theme-light .popover__title  { color: #7c3aed; }
 body.theme-light .popover__body   { color: #2d0050; }
+body.theme-light .popover__feelings-label { color: #7c3aed; }
+body.theme-light .popover__feelings-input { border-color: rgba(124,58,237,.25); background: rgba(124,58,237,.06); color: #2d0050; }
+body.theme-light .popover__feelings-input:focus { border-color: #7c3aed; background: rgba(124,58,237,.1); }
+body.theme-light .popover__feelings-input::placeholder { color: rgba(45,0,80,.35); }
+body.theme-light .popover__feelings-view { background: rgba(124,58,237,.06); border-color: rgba(124,58,237,.18); }
 body.theme-light .popover__x { border-color: rgba(147,51,234,.2); background: rgba(147,51,234,.07); color: var(--text); }
 body.theme-light .modal__card {
   background: rgba(253, 246, 255, 0.98);
@@ -944,6 +1019,11 @@ body.theme-floral .popover__card  { background: rgba(255,252,250,.98); border-co
 body.theme-floral .popover__header { border-bottom-color: rgba(190,24,93,.15); }
 body.theme-floral .popover__title  { color: #9d174d; }
 body.theme-floral .popover__body   { color: #4a1020; }
+body.theme-floral .popover__feelings-label { color: #9d174d; }
+body.theme-floral .popover__feelings-input { border-color: rgba(157,23,77,.25); background: rgba(157,23,77,.06); color: #4a1020; }
+body.theme-floral .popover__feelings-input:focus { border-color: #9d174d; background: rgba(157,23,77,.1); }
+body.theme-floral .popover__feelings-input::placeholder { color: rgba(74,16,32,.35); }
+body.theme-floral .popover__feelings-view { background: rgba(157,23,77,.06); border-color: rgba(157,23,77,.18); }
 body.theme-floral .popover__x { border-color: rgba(190,24,93,.2); background: rgba(190,24,93,.07); color: var(--text); }
 body.theme-floral .modal__card  { background: rgba(255,250,252,.98); border-color: rgba(190,24,93,.25); }
 body.theme-floral .modal__header { border-bottom-color: rgba(190,24,93,.14); }
