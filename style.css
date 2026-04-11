@@ -665,6 +665,46 @@ body {
   cursor: default;
 }
 
+.setting-row--qr {
+  align-items: center;
+}
+
+.btn--small {
+  padding: 6px 14px;
+  font-size: 13px;
+  min-height: unset;
+  height: auto;
+}
+
+.qr-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 12px 8px;
+}
+.qr-panel[hidden] { display: none; }
+
+.qr-canvas {
+  background: #fff;
+  border-radius: 14px;
+  padding: 10px;
+  box-shadow: 0 4px 18px rgba(76,29,149,0.18);
+  display: inline-flex;
+}
+.qr-canvas img, .qr-canvas canvas {
+  display: block;
+  border-radius: 6px;
+}
+
+.qr-url {
+  font-size: 11px;
+  color: var(--muted);
+  word-break: break-all;
+  text-align: center;
+  direction: ltr;
+}
+
 .setting-label { flex: 1; min-width: 0; }
 
 .setting-name {

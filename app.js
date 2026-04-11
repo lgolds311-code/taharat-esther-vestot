@@ -705,17 +705,26 @@ function buildCell({ date, muted, today, marks }) {
     const anchor   = cell.getBoundingClientRect();
 
     if (existing) {
-      // ── מחיקה / עריכה ──
+      // ── עריכה / מחיקה ──
       const existingFeelings = state.entries[key]?.feelings || "";
-      const feelingsHtml = existingFeelings
-        ? `<div class="popover__feelings-view">${existingFeelings.replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/\n/g,"<br>")}</div>`
-        : "";
+      const escapedFeelings  = existingFeelings.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
       openPopover({
-        title: "מחיקה",
-        bodyHTML: `<div class="popover__info">${title}<br>מסומן כ־${existing === "night" ? "לילה" : "יום"}.</div>${feelingsHtml}<div class="popover__question">למחוק את הרישום?</div>`,
+        title,
+        bodyHTML: `<div class="popover__info">מסומן כ־${existing === "night" ? "לילה" : "יום"}.</div><label class="popover__feelings-label">הרגשות גוף<textarea class="popover__feelings-input" placeholder="למשל: כאב ראש, עייפות, כאבי בטן...">${escapedFeelings}</textarea></label>`,
         actions: [
           {
-            label: "כן, למחוק", className: "btn btn--danger",
+            label: "שמור", className: "btn btn--primary",
+            onClick: () => {
+              const feelings = els.popoverBody.querySelector(".popover__feelings-input")?.value?.trim() || "";
+              state.entries[key] = { ...state.entries[key], updatedAt: Date.now() };
+              if (feelings) state.entries[key].feelings = feelings;
+              else delete state.entries[key].feelings;
+              saveJson(STORAGE.entries, state.entries);
+              renderMonth();
+            },
+          },
+          {
+            label: "מחיקה", className: "btn btn--danger",
             onClick: () => {
               delete state.entries[key];
               saveJson(STORAGE.entries, state.entries);
@@ -723,7 +732,7 @@ function buildCell({ date, muted, today, marks }) {
             },
           },
           {
-            label: "לא", className: "btn",
+            label: "ביטול", className: "btn btn--ghost",
             onClick: () => renderMonth(),
           },
         ],
@@ -992,6 +1001,38 @@ els.themeSelect?.addEventListener("change", (e) => {
   state.settings.theme = theme;
   saveSettings(state.settings);
   applyTheme(theme);
+});
+
+// ── QR ──
+const qrBtn   = document.querySelector("#qr-btn");
+const qrPanel = document.querySelector("#qr-panel");
+const qrCanvas = document.querySelector("#qr-canvas");
+const qrUrlText = document.querySelector("#qr-url-text");
+let qrGenerated = false;
+
+qrBtn?.addEventListener("click", () => {
+  if (qrPanel.hidden) {
+    qrPanel.hidden = false;
+    qrBtn.textContent = "הסתר QR";
+    if (!qrGenerated) {
+      const url = location.origin + location.pathname.replace(/\/$/, "");
+      if (qrUrlText) qrUrlText.textContent = url;
+      if (window.QRCode && qrCanvas) {
+        new QRCode(qrCanvas, {
+          text: url,
+          width: 180,
+          height: 180,
+          colorDark: "#4c1d95",
+          colorLight: "#ffffff",
+          correctLevel: QRCode.CorrectLevel.H,
+        });
+        qrGenerated = true;
+      }
+    }
+  } else {
+    qrPanel.hidden = true;
+    qrBtn.textContent = "הצג QR";
+  }
 });
 
 // ─────────────────────────────────────────────────────────────────────────────

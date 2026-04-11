@@ -170,11 +170,25 @@
             </button>
           </div>
 
+          <!-- שיתוף QR -->
+          <div class="setting-row setting-row--qr">
+            <div class="setting-label">
+              <div class="setting-name">שיתוף האפליקציה</div>
+              <div class="setting-desc">קוד QR לשיתוף הקישור לאפליקציה</div>
+            </div>
+            <button id="qr-btn" class="btn btn--ghost btn--small" type="button">הצג QR</button>
+          </div>
+          <div id="qr-panel" class="qr-panel" hidden>
+            <div id="qr-canvas" class="qr-canvas"></div>
+            <div class="qr-url" id="qr-url-text"></div>
+          </div>
+
         </div>
       </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/@hebcal/core@6.0.8/dist/bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="./app.js"></script>
   </body>
 </html>
