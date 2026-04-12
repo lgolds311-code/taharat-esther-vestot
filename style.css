@@ -329,6 +329,28 @@ body {
   }
 }
 
+@media (max-width: 380px) {
+  .brand {
+    gap: 8px;
+  }
+
+  .logo {
+    width: 36px;
+    height: 36px;
+    font-size: 18px;
+    border-radius: 10px;
+    flex-shrink: 0;
+  }
+
+  .title {
+    font-size: 16px;
+  }
+
+  .subtitle {
+    font-size: 11px;
+  }
+}
+
 .drawer {
   border-top: 1px solid rgba(217, 70, 239, 0.12);
   background: rgba(60, 10, 80, 0.18);
