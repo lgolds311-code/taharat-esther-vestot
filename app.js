@@ -38,6 +38,7 @@ const els = {
   notif1FixedTime:      document.querySelector("#notif1-fixed-time"),
   notif2FixedTime:      document.querySelector("#notif2-fixed-time"),
   hefsekMinDay:         document.querySelector("#hefsek-min-day"),
+  hefsekReminderMin:    document.querySelector("#hefsek-reminder-min"),
   hefsekMorningTime:    document.querySelector("#hefsek-morning-time"),
   hefsekEveningMin:     document.querySelector("#hefsek-evening-min"),
   hefsekMikvehToggle:   document.querySelector("#hefsek-mikveh-toggle"),
@@ -350,6 +351,7 @@ const DEFAULT_SETTINGS = {
   notifSound: "default",
   // ── הפסק טהרה ──
   hefsekMinDay: 4,           // יום מינימלי להפסק (4/5/6/7)
+  hefsekReminderMin: 30,     // דקות לפני שקיעה לתזכורת הפסק טהרה
   hefsekMorningTime: "07:00",// שעת תזכורת בדיקת בוקר ב-ז׳ נקיים
   hefsekEveningMin: 30,      // דקות לפני שקיעה לבדיקת ערב / הפסק טהרה
   hefsekMikvehReminder: true,// תזכורת טבילה ביום 7
@@ -1344,6 +1346,10 @@ els.hefsekMinDay?.addEventListener("change", (e) => {
   state.settings.hefsekMinDay = parseInt(e.target.value) || 4;
   saveSettings(state.settings);
 });
+els.hefsekReminderMin?.addEventListener("change", (e) => {
+  state.settings.hefsekReminderMin = Math.max(0, parseInt(e.target.value) || 30);
+  saveSettings(state.settings);
+});
 els.hefsekMorningTime?.addEventListener("change", (e) => {
   state.settings.hefsekMorningTime = e.target.value;
   saveSettings(state.settings);
@@ -1513,6 +1519,7 @@ if (els.notifSoundFileName && state.settings.notifSound === "custom") {
 
 // הפסק טהרה — סנכרון UI
 if (els.hefsekMinDay)      els.hefsekMinDay.value       = String(state.settings.hefsekMinDay ?? 4);
+if (els.hefsekReminderMin) els.hefsekReminderMin.value  = state.settings.hefsekReminderMin ?? 30;
 if (els.hefsekMorningTime) els.hefsekMorningTime.value  = state.settings.hefsekMorningTime || "07:00";
 if (els.hefsekEveningMin)  els.hefsekEveningMin.value   = state.settings.hefsekEveningMin ?? 30;
 if (els.hefsekMikvehToggle) {

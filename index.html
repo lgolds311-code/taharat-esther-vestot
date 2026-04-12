@@ -319,11 +319,20 @@
                 <div class="setting-desc">מאיזה יום לאחר הוסת ניתן לעשות הפסק</div>
               </div>
               <select id="hefsek-min-day" class="select select--small" aria-label="יום מינימלי לפסיקה">
-                <option value="4">יום ד׳ (ברירת מחדל)</option>
-                <option value="5">יום ה׳</option>
-                <option value="6">יום ו׳</option>
-                <option value="7">יום ז׳</option>
+                <option value="4">מהיום הרביעי (ברירת מחדל)</option>
+                <option value="5">מהיום החמישי</option>
+                <option value="6">מהיום השישי</option>
+                <option value="7">מהיום השביעי</option>
               </select>
+            </div>
+
+            <!-- תזכורת הפסק טהרה -->
+            <div class="setting-row">
+              <div class="setting-label">
+                <div class="setting-name">תזכורת הפסק טהרה</div>
+                <div class="setting-desc">דקות לפני השקיעה (ברירת מחדל: 30)</div>
+              </div>
+              <input id="hefsek-reminder-min" class="input--number" type="number" min="5" max="120" placeholder="30">
             </div>
 
             <!-- תזכורות ז׳ נקיים -->
