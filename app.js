@@ -39,8 +39,11 @@ const els = {
   notif2FixedTime:      document.querySelector("#notif2-fixed-time"),
   hefsekMinDay:         document.querySelector("#hefsek-min-day"),
   hefsekReminderMin:    document.querySelector("#hefsek-reminder-min"),
+  hefsekReminderTime:   document.querySelector("#hefsek-reminder-time"),
+  hefsekMorningMin:     document.querySelector("#hefsek-morning-min"),
   hefsekMorningTime:    document.querySelector("#hefsek-morning-time"),
   hefsekEveningMin:     document.querySelector("#hefsek-evening-min"),
+  hefsekEveningTime:    document.querySelector("#hefsek-evening-time"),
   hefsekMikvehToggle:   document.querySelector("#hefsek-mikveh-toggle"),
   hefsekMikvehTimeRow:  document.querySelector("#hefsek-mikveh-time-row"),
   hefsekMikvehTime:     document.querySelector("#hefsek-mikveh-time"),
@@ -350,12 +353,15 @@ const DEFAULT_SETTINGS = {
   notif1FixedTime: "", notif2FixedTime: "",
   notifSound: "default",
   // ── הפסק טהרה ──
-  hefsekMinDay: 4,           // יום מינימלי להפסק (4/5/6/7)
-  hefsekReminderMin: 30,     // דקות לפני שקיעה לתזכורת הפסק טהרה
-  hefsekMorningTime: "07:00",// שעת תזכורת בדיקת בוקר ב-ז׳ נקיים
-  hefsekEveningMin: 30,      // דקות לפני שקיעה לבדיקת ערב / הפסק טהרה
-  hefsekMikvehReminder: true,// תזכורת טבילה ביום 7
-  hefsekMikvehTime: "",      // שעה קבועה לתזכורת טבילה (ריק = לפי שקיעה)
+  hefsekMinDay: 4,            // יום מינימלי להפסק (4/5/6/7)
+  hefsekReminderMin: 30,      // דקות לפני שקיעה לתזכורת הפסק טהרה
+  hefsekReminderTime: "",     // שעה קבועה לתזכורת הפסק (ריק = לפי דקות)
+  hefsekMorningMin: 0,        // דקות אחרי זריחה לבדיקת בוקר
+  hefsekMorningTime: "07:00", // שעה קבועה לבדיקת בוקר (גוברת על דקות)
+  hefsekEveningMin: 30,       // דקות לפני שקיעה לבדיקת ערב
+  hefsekEveningTime: "",      // שעה קבועה לבדיקת ערב (ריק = לפי דקות)
+  hefsekMikvehReminder: true, // תזכורת טבילה ביום 7
+  hefsekMikvehTime: "",       // שעה קבועה לתזכורת טבילה (ריק = לפי שקיעה)
 };
 
 function loadSettings() {
@@ -552,13 +558,15 @@ function checkDailyNotifications() {
         return d && vestDate && d > vestDate;
       });
       if (!hasValidHefsek) {
-        const reminderMin = state.settings.hefsekReminderMin ?? 30;
-        scheduleAt(
-          new Date(sunset.getTime() - reminderMin * 60_000),
-          `hefsek-reminder-${todayKey}`,
-          "הפסק טהרה",
-          "הגיע הזמן לעשות הפסק טהרה לפני השקיעה"
-        );
+        const fixedT = state.settings.hefsekReminderTime || "";
+        let hefsekT;
+        if (fixedT) {
+          const [hh, mm] = fixedT.split(":").map(Number);
+          hefsekT = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hh, mm);
+        } else {
+          hefsekT = new Date(sunset.getTime() - (state.settings.hefsekReminderMin ?? 30) * 60_000);
+        }
+        scheduleAt(hefsekT, `hefsek-reminder-${todayKey}`, "הפסק טהרה", "הגיע הזמן לעשות הפסק טהרה לפני השקיעה");
       }
     }
   }
@@ -566,25 +574,27 @@ function checkDailyNotifications() {
   // ── תזכורות שבעה נקיים ──
   const nekiimDay = isShivaNekiimDay(todayKey);
   if (nekiimDay) {
-    // בדיקת בוקר
-    const morningTime = state.settings.hefsekMorningTime || "07:00";
-    const [mhh, mmm] = morningTime.split(":").map(Number);
-    const morningT = new Date(now.getFullYear(), now.getMonth(), now.getDate(), mhh, mmm);
-    scheduleAt(
-      morningT,
-      `nekiim-morning-${todayKey}`,
-      `בדיקת בוקר (יום ${nekiimDay})`,
-      "בוקר טוב, לא לשכוח בדיקת בוקר של שבעה נקיים"
-    );
+    // בדיקת בוקר — שעה קבועה גוברת על דקות אחרי זריחה
+    let morningT;
+    const morningFixed = state.settings.hefsekMorningTime || "";
+    if (morningFixed) {
+      const [hh, mm] = morningFixed.split(":").map(Number);
+      morningT = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hh, mm);
+    } else {
+      morningT = new Date(sunrise.getTime() + (state.settings.hefsekMorningMin ?? 0) * 60_000);
+    }
+    scheduleAt(morningT, `nekiim-morning-${todayKey}`, `בדיקת בוקר (יום ${nekiimDay})`, "בוקר טוב, לא לשכוח בדיקת בוקר של שבעה נקיים");
 
-    // בדיקת ערב
-    const eveningMin = state.settings.hefsekEveningMin ?? 30;
-    scheduleAt(
-      new Date(sunset.getTime() - eveningMin * 60_000),
-      `nekiim-evening-${todayKey}`,
-      `בדיקת ערב (יום ${nekiimDay})`,
-      "לא לשכוח בדיקת ערב לפני השקיעה"
-    );
+    // בדיקת ערב — שעה קבועה גוברת על דקות לפני שקיעה
+    let eveningT;
+    const eveningFixed = state.settings.hefsekEveningTime || "";
+    if (eveningFixed) {
+      const [hh, mm] = eveningFixed.split(":").map(Number);
+      eveningT = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hh, mm);
+    } else {
+      eveningT = new Date(sunset.getTime() - (state.settings.hefsekEveningMin ?? 30) * 60_000);
+    }
+    scheduleAt(eveningT, `nekiim-evening-${todayKey}`, `בדיקת ערב (יום ${nekiimDay})`, "לא לשכוח בדיקת ערב לפני השקיעה");
 
     // ── תזכורת טבילה — רק ביום 7 ──
     if (nekiimDay === 7 && state.settings.hefsekMikvehReminder !== false) {
@@ -600,7 +610,7 @@ function checkDailyNotifications() {
         mikvehT,
         `mikveh-${todayKey}`,
         "ערב טבילה",
-        "היום בערב טבילה. הכנות נעימות!"
+        "היום בערב טבילה."
       );
     }
   }
@@ -1066,23 +1076,29 @@ function buildCell({ date, muted, today, marks }) {
       const eFail = rec.checkEvening === "fail"  ? " popover__check-btn--active" : "";
       extraHTML = `<div class="popover__hefsek-section"><div class="popover__hefsek-title">יום ${nekiimDay} בשבעה נקיים</div><div class="popover__check-row"><span class="popover__check-label">בדיקת בוקר</span><button type="button" class="popover__check-btn popover__check-btn--ok${mOk}" data-check="morning" data-val="ok">✓</button><button type="button" class="popover__check-btn popover__check-btn--fail${mFail}" data-check="morning" data-val="fail">✗</button></div><div class="popover__check-row"><span class="popover__check-label">בדיקת ערב</span><button type="button" class="popover__check-btn popover__check-btn--ok${eOk}" data-check="evening" data-val="ok">✓</button><button type="button" class="popover__check-btn popover__check-btn--fail${eFail}" data-check="evening" data-val="fail">✗</button></div></div>`;
     } else {
-      // בדיקת זכאות להפסק טהרה
-      const vestList = getSortedEntries();
-      const lastVest = vestList[0];
-      if (lastVest) {
-        const eligibleDate = getHefsekEligibleDate(lastVest.iso);
-        const vestDate     = parseIsoKey(lastVest.iso);
-        if (eligibleDate && date >= eligibleDate) {
-          const hasValidHefsek = Object.entries(state.entries || {}).some(([iso, rec]) => {
-            if (rec?.hefsek !== "ok") return false;
-            const d = parseIsoKey(iso);
-            return d && vestDate && d > vestDate;
-          });
-          if (!hasValidHefsek) {
-            const rec   = state.entries[key] || {};
-            const hOk   = rec.hefsek === "ok"   ? " popover__check-btn--active" : "";
-            const hFail = rec.hefsek === "fail"  ? " popover__check-btn--active" : "";
-            extraHTML = `<div class="popover__hefsek-section"><div class="popover__check-row"><span class="popover__check-label">הפסק טהרה</span><button type="button" class="popover__check-btn popover__check-btn--ok${hOk}" data-hefsek="ok">✓ תקין</button><button type="button" class="popover__check-btn popover__check-btn--fail${hFail}" data-hefsek="fail">✗ ראיתי דם</button></div></div>`;
+      const rec = state.entries[key] || {};
+      if (rec.hefsek) {
+        // יש כבר סימון הפסק — מאפשר עריכה ומחיקה
+        const statusText = rec.hefsek === "ok" ? "הפסק תקין ✦" : "הפסק נכשל ✗";
+        const hOk   = rec.hefsek === "ok"   ? " popover__check-btn--active" : "";
+        const hFail = rec.hefsek === "fail"  ? " popover__check-btn--active" : "";
+        extraHTML = `<div class="popover__hefsek-section"><div class="popover__hefsek-title">סטטוס: ${statusText}</div><div class="popover__check-row"><span class="popover__check-label">שנה ל:</span><button type="button" class="popover__check-btn popover__check-btn--ok${hOk}" data-hefsek="ok">✓ תקין</button><button type="button" class="popover__check-btn popover__check-btn--fail${hFail}" data-hefsek="fail">✗ ראיתי דם</button><button type="button" class="popover__check-btn popover__check-btn--del" data-hefsek-delete="1">מחק</button></div></div>`;
+      } else {
+        // בדיקת זכאות להפסק טהרה
+        const vestList = getSortedEntries();
+        const lastVest = vestList[0];
+        if (lastVest) {
+          const eligibleDate = getHefsekEligibleDate(lastVest.iso);
+          const vestDate     = parseIsoKey(lastVest.iso);
+          if (eligibleDate && date >= eligibleDate) {
+            const hasValidHefsek = Object.entries(state.entries || {}).some(([iso, r]) => {
+              if (r?.hefsek !== "ok") return false;
+              const d = parseIsoKey(iso);
+              return d && vestDate && d > vestDate;
+            });
+            if (!hasValidHefsek) {
+              extraHTML = `<div class="popover__hefsek-section"><div class="popover__check-row"><span class="popover__check-label">הפסק טהרה</span><button type="button" class="popover__check-btn popover__check-btn--ok" data-hefsek="ok">✓ תקין</button><button type="button" class="popover__check-btn popover__check-btn--fail" data-hefsek="fail">✗ ראיתי דם</button></div></div>`;
+            }
           }
         }
       }
@@ -1116,6 +1132,17 @@ function buildCell({ date, muted, today, marks }) {
           if (!state.entries[key]) state.entries[key] = { updatedAt: Date.now() };
           state.entries[key].hefsek    = val;
           state.entries[key].updatedAt = Date.now();
+          saveJson(STORAGE.entries, state.entries);
+          closePopover();
+          renderMonth();
+        });
+      });
+      els.popoverBody.querySelectorAll("[data-hefsek-delete]").forEach(btn => {
+        btn.addEventListener("click", () => {
+          if (state.entries[key]) {
+            delete state.entries[key].hefsek;
+            state.entries[key].updatedAt = Date.now();
+          }
           saveJson(STORAGE.entries, state.entries);
           closePopover();
           renderMonth();
@@ -1579,12 +1606,24 @@ els.hefsekReminderMin?.addEventListener("change", (e) => {
   state.settings.hefsekReminderMin = Math.max(0, parseInt(e.target.value) || 30);
   saveSettings(state.settings);
 });
+els.hefsekReminderTime?.addEventListener("change", (e) => {
+  state.settings.hefsekReminderTime = e.target.value;
+  saveSettings(state.settings);
+});
+els.hefsekMorningMin?.addEventListener("change", (e) => {
+  state.settings.hefsekMorningMin = Math.max(0, parseInt(e.target.value) || 0);
+  saveSettings(state.settings);
+});
 els.hefsekMorningTime?.addEventListener("change", (e) => {
   state.settings.hefsekMorningTime = e.target.value;
   saveSettings(state.settings);
 });
 els.hefsekEveningMin?.addEventListener("change", (e) => {
   state.settings.hefsekEveningMin = Math.max(0, parseInt(e.target.value) || 30);
+  saveSettings(state.settings);
+});
+els.hefsekEveningTime?.addEventListener("change", (e) => {
+  state.settings.hefsekEveningTime = e.target.value;
   saveSettings(state.settings);
 });
 els.hefsekMikvehToggle?.addEventListener("click", () => {
@@ -1747,10 +1786,13 @@ if (els.notifSoundFileName && state.settings.notifSound === "custom") {
 }
 
 // הפסק טהרה — סנכרון UI
-if (els.hefsekMinDay)      els.hefsekMinDay.value       = String(state.settings.hefsekMinDay ?? 4);
-if (els.hefsekReminderMin) els.hefsekReminderMin.value  = state.settings.hefsekReminderMin ?? 30;
-if (els.hefsekMorningTime) els.hefsekMorningTime.value  = state.settings.hefsekMorningTime || "07:00";
-if (els.hefsekEveningMin)  els.hefsekEveningMin.value   = state.settings.hefsekEveningMin ?? 30;
+if (els.hefsekMinDay)       els.hefsekMinDay.value        = String(state.settings.hefsekMinDay ?? 4);
+if (els.hefsekReminderMin)  els.hefsekReminderMin.value   = state.settings.hefsekReminderMin ?? 30;
+if (els.hefsekReminderTime) els.hefsekReminderTime.value  = state.settings.hefsekReminderTime || "";
+if (els.hefsekMorningMin)   els.hefsekMorningMin.value    = state.settings.hefsekMorningMin ?? 0;
+if (els.hefsekMorningTime)  els.hefsekMorningTime.value   = state.settings.hefsekMorningTime || "07:00";
+if (els.hefsekEveningMin)   els.hefsekEveningMin.value    = state.settings.hefsekEveningMin ?? 30;
+if (els.hefsekEveningTime)  els.hefsekEveningTime.value   = state.settings.hefsekEveningTime || "";
 if (els.hefsekMikvehToggle) {
   const on = state.settings.hefsekMikvehReminder !== false;
   els.hefsekMikvehToggle.setAttribute("aria-checked", String(on));

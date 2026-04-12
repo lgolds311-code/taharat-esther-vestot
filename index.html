@@ -330,9 +330,18 @@
             <div class="setting-row">
               <div class="setting-label">
                 <div class="setting-name">תזכורת הפסק טהרה</div>
-                <div class="setting-desc">דקות לפני השקיעה (ברירת מחדל: 30)</div>
+                <div class="setting-desc">שעה קבועה גוברת על דקות לפני שקיעה</div>
               </div>
-              <input id="hefsek-reminder-min" class="input--number" type="number" min="5" max="120" placeholder="30">
+              <div class="setting-time-pair">
+                <div class="setting-time-field">
+                  <span class="setting-time-lbl">דק׳ לפני שקיעה</span>
+                  <input id="hefsek-reminder-min" class="input--number" type="number" min="0" max="120" placeholder="30">
+                </div>
+                <div class="setting-time-field">
+                  <span class="setting-time-lbl">שעה קבועה</span>
+                  <input id="hefsek-reminder-time" class="input--text" type="time">
+                </div>
+              </div>
             </div>
 
             <!-- תזכורות ז׳ נקיים -->
@@ -340,18 +349,36 @@
 
             <div class="setting-row setting-row--sub">
               <div class="setting-label">
-                <div class="setting-name">שעת תזכורת בדיקת בוקר</div>
-                <div class="setting-desc">ברירת מחדל: 07:00 (מהזריחה)</div>
+                <div class="setting-name">בדיקת בוקר</div>
+                <div class="setting-desc">שעה קבועה גוברת על דקות אחרי זריחה</div>
               </div>
-              <input id="hefsek-morning-time" class="input--text" type="time">
+              <div class="setting-time-pair">
+                <div class="setting-time-field">
+                  <span class="setting-time-lbl">דק׳ אחרי זריחה</span>
+                  <input id="hefsek-morning-min" class="input--number" type="number" min="0" max="120" placeholder="0">
+                </div>
+                <div class="setting-time-field">
+                  <span class="setting-time-lbl">שעה קבועה</span>
+                  <input id="hefsek-morning-time" class="input--text" type="time">
+                </div>
+              </div>
             </div>
 
             <div class="setting-row setting-row--sub">
               <div class="setting-label">
-                <div class="setting-name">תזכורת בדיקת ערב</div>
-                <div class="setting-desc">דקות לפני שקיעה (ברירת מחדל: 30)</div>
+                <div class="setting-name">בדיקת ערב</div>
+                <div class="setting-desc">שעה קבועה גוברת על דקות לפני שקיעה</div>
               </div>
-              <input id="hefsek-evening-min" class="input--number" type="number" min="5" max="120" placeholder="30">
+              <div class="setting-time-pair">
+                <div class="setting-time-field">
+                  <span class="setting-time-lbl">דק׳ לפני שקיעה</span>
+                  <input id="hefsek-evening-min" class="input--number" type="number" min="0" max="120" placeholder="30">
+                </div>
+                <div class="setting-time-field">
+                  <span class="setting-time-lbl">שעה קבועה</span>
+                  <input id="hefsek-evening-time" class="input--text" type="time">
+                </div>
+              </div>
             </div>
 
             <!-- תזכורת טבילה -->
