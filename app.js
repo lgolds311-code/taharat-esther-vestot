@@ -8,8 +8,11 @@ const els = {
   monthHeb:       document.querySelector("#month-heb"),
   prev:           document.querySelector("#prev-month"),
   next:           document.querySelector("#next-month"),
-  exportIcs:      document.querySelector("#export-ics"),
-  clearAll:       document.querySelector("#clear-all"),
+  exportIcs:        document.querySelector("#export-ics"),
+  clearAll:         document.querySelector("#clear-all"),
+  exportBackup:     document.querySelector("#export-backup"),
+  importBackupBtn:  document.querySelector("#import-backup-btn"),
+  importBackupFile: document.querySelector("#import-backup-file"),
   calcSummary:    document.querySelector("#calc-summary"),
   popover:        document.querySelector("#popover"),
   popoverTitle:   document.querySelector("#popover-title"),
@@ -942,11 +945,54 @@ function exportIcs() {
 // Controls
 // ─────────────────────────────────────────────────────────────────────────────
 function clearAll() {
-  if (!confirm("לנקות את כל הנתונים?")) return;
-  state.entries = {}; state.selectedIso = null;
-  saveJson(STORAGE.entries, state.entries);
-  renderMonth();
+  openPopover({
+    title: "מחיקת נתונים",
+    bodyText: "האם את בטוחה שברצונך למחוק את כל הנתונים לצמיתות? פעולה זו אינה הפיכה.",
+    actions: [
+      {
+        label: "מחקי הכל", className: "btn btn--danger",
+        onClick: () => {
+          state.entries = {}; state.selectedIso = null;
+          saveJson(STORAGE.entries, state.entries);
+          renderMonth();
+        },
+      },
+      { label: "ביטול", className: "btn btn--ghost", onClick: () => {} },
+    ],
+    anchorRect: els.clearAll?.getBoundingClientRect(),
+  });
 }
+
+// ── גיבוי ושחזור ──
+els.exportBackup?.addEventListener("click", () => {
+  const backup = { entries: state.entries, settings: state.settings };
+  downloadText("taharat-esther-backup.json", JSON.stringify(backup, null, 2), "application/json");
+});
+
+els.importBackupBtn?.addEventListener("click", () => {
+  els.importBackupFile?.click();
+});
+
+els.importBackupFile?.addEventListener("change", (e) => {
+  const file = e.target.files?.[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    try {
+      const data = JSON.parse(ev.target.result);
+      if (!data || typeof data !== "object") throw new Error("פורמט לא תקין");
+      if (data.entries)  { state.entries  = data.entries;  saveJson(STORAGE.entries, state.entries); }
+      if (data.settings) { state.settings = { ...loadSettings(), ...data.settings }; saveSettings(state.settings); }
+      renderMonth();
+      alert("הנתונים שוחזרו בהצלחה.");
+    } catch {
+      alert("שגיאה בייבוא הקובץ. ודאי שהקובץ תקין.");
+    } finally {
+      e.target.value = "";   // איפוס לאפשר ייבוא אותו קובץ שוב
+    }
+  };
+  reader.readAsText(file);
+});
 
 els.prev.addEventListener("click", () => {
   const p = addHebMonths(state.viewHYear, state.viewHMonth, -1);

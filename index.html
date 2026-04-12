@@ -82,6 +82,15 @@
             <div class="drawer__row">
               <div id="calc-summary" class="summary">לחצי על תאריך כדי לרשום יום/לילה. החישובים יוצגו ויסומנו בלוח.</div>
             </div>
+
+            <div class="drawer__row">
+              <div class="drawer__title">גיבוי ושחזור נתונים</div>
+              <div class="drawer__row drawer__row--controls">
+                <button id="export-backup" class="btn btn--ghost" type="button">📥 ייצוא נתונים</button>
+                <button id="import-backup-btn" class="btn btn--ghost" type="button">📤 ייבוא נתונים</button>
+              </div>
+              <input type="file" id="import-backup-file" accept=".json" hidden>
+            </div>
           </div>
         </section>
       </main>
