@@ -36,6 +36,12 @@ const els = {
   notif2Name:           document.querySelector("#notif2-name"),
   notif2Min:            document.querySelector("#notif2-min"),
   notifFixedTime:       document.querySelector("#notif-fixed-time"),
+  notifSoundSelect:     document.querySelector("#notif-sound-select"),
+  notifSoundTest:       document.querySelector("#notif-sound-test"),
+  notifSoundFileRow:    document.querySelector("#notif-sound-file-row"),
+  notifSoundFile:       document.querySelector("#notif-sound-file"),
+  notifSoundFileBtn:    document.querySelector("#notif-sound-file-btn"),
+  notifSoundFileName:   document.querySelector("#notif-sound-file-name"),
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -47,6 +53,7 @@ const STORAGE = {
   location:         "monthlyCalendar.location.v1",
   settings:         "monthlyCalendar.settings.v1",
   lastNotification: "monthlyCalendar.lastNotification.v1",
+  soundData:        "monthlyCalendar.soundData.v1",
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -332,6 +339,7 @@ const DEFAULT_SETTINGS = {
   notificationsEnabled: false,
   notif1Name: "", notif2Name: "",
   reminderStartMin: 0, reminderEndMin: 30, reminderFixedTime: "",
+  notifSound: "default",
 };
 
 function loadSettings() {
@@ -345,6 +353,69 @@ function saveSettings(s) {
 function applyTheme(theme) {
   document.body.classList.remove("theme-light", "theme-floral");
   if (theme && theme !== "dark") document.body.classList.add(`theme-${theme}`);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Sound engine
+// ─────────────────────────────────────────────────────────────────────────────
+let _audioCtx = null;
+function _getAudioCtx() {
+  if (!_audioCtx || _audioCtx.state === "closed") {
+    _audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  }
+  if (_audioCtx.state === "suspended") _audioCtx.resume();
+  return _audioCtx;
+}
+
+/** מנגן צליל התראה לפי סוג */
+function playNotificationSound(type) {
+  if (!type || type === "default" || type === "silent") return;
+
+  if (type === "custom") {
+    const data = localStorage.getItem(STORAGE.soundData);
+    if (data) {
+      try { new Audio(data).play().catch(() => {}); } catch {}
+    }
+    return;
+  }
+
+  try {
+    const ctx = _getAudioCtx();
+    if (type === "bell") {
+      // פעמון — גל סינוס עם דעיכה
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.frequency.value = 880; osc.type = "sine";
+      gain.gain.setValueAtTime(0.45, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 2);
+      osc.start(ctx.currentTime); osc.stop(ctx.currentTime + 2);
+    } else if (type === "chime") {
+      // צלצול עדין — שני תדרים עוקבים
+      [[880, 0, 1.2], [1320, 0.14, 1.1]].forEach(([freq, delay, dur]) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain); gain.connect(ctx.destination);
+        osc.frequency.value = freq; osc.type = "sine";
+        const t = ctx.currentTime + delay;
+        gain.gain.setValueAtTime(0.3, t);
+        gain.gain.exponentialRampToValueAtTime(0.001, t + dur);
+        osc.start(t); osc.stop(t + dur);
+      });
+    } else if (type === "beeps") {
+      // שלוש פעימות קצרות
+      [0, 0.22, 0.44].forEach(delay => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain); gain.connect(ctx.destination);
+        osc.frequency.value = 660; osc.type = "square";
+        const t = ctx.currentTime + delay;
+        gain.gain.setValueAtTime(0.2, t);
+        gain.gain.exponentialRampToValueAtTime(0.001, t + 0.14);
+        osc.start(t); osc.stop(t + 0.14);
+      });
+    }
+  } catch {}
 }
 
 /** בדיקת התראות יומית — מופעלת פעם אחת בעליית האפליקציה */
@@ -389,9 +460,12 @@ function checkDailyNotifications() {
   const send = (id, title, body) => {
     if (sentSet.has(id)) return;
     try {
-      new Notification(`טהרת אסתר — ${title}`, {
-        body, icon: "./icon.svg", lang: "he", dir: "rtl",
-      });
+      const soundType = state.settings.notifSound || "default";
+      const notifOpts = { body, icon: "./icon.svg", lang: "he", dir: "rtl" };
+      // כשמנגנים צליל מותאם — מושתקים את צליל המערכת
+      if (soundType !== "default") notifOpts.silent = true;
+      new Notification(`טהרת אסתר — ${title}`, notifOpts);
+      playNotificationSound(soundType);
       sentSet.add(id);
       saveSent();
     } catch {}
@@ -1177,6 +1251,61 @@ els.notifFixedTime?.addEventListener("change", (e) => {
   saveSettings(state.settings);
 });
 
+// בחירת צליל תזכורת
+els.notifSoundSelect?.addEventListener("change", (e) => {
+  const type = e.target.value;
+  state.settings.notifSound = type;
+  saveSettings(state.settings);
+  if (els.notifSoundFileRow) els.notifSoundFileRow.hidden = (type !== "custom");
+});
+
+// כפתור נגינת דוגמה
+els.notifSoundTest?.addEventListener("click", () => {
+  const type = state.settings.notifSound || "default";
+  if (type === "silent") return;
+  if (type === "default") {
+    // ברירת מחדל: צליל מהמערכת — משמיעים קצר דרך AudioContext
+    try {
+      const ctx = _getAudioCtx();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.frequency.value = 880; osc.type = "sine";
+      gain.gain.setValueAtTime(0.3, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 1.5);
+      osc.start(ctx.currentTime); osc.stop(ctx.currentTime + 1.5);
+    } catch {}
+    return;
+  }
+  playNotificationSound(type);
+});
+
+// בחירת קובץ — פתיחת חלון בחירה
+els.notifSoundFileBtn?.addEventListener("click", () => {
+  els.notifSoundFile?.click();
+});
+
+// טיפול בקובץ שנבחר
+els.notifSoundFile?.addEventListener("change", (e) => {
+  const file = e.target.files?.[0];
+  if (!file) return;
+  if (file.size > 3 * 1024 * 1024) {
+    alert("הקובץ גדול מדי (מקסימום 3MB). בחרי קובץ קצר יותר.");
+    e.target.value = "";
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    try {
+      localStorage.setItem(STORAGE.soundData, ev.target.result);
+      if (els.notifSoundFileName) els.notifSoundFileName.textContent = file.name;
+    } catch {
+      alert("לא ניתן לשמור את הקובץ. ייתכן שאין מקום מספיק. בחרי קובץ קצר יותר.");
+    }
+  };
+  reader.readAsDataURL(file);
+});
+
 // בחירת ערכת נושא
 els.themeSelect?.addEventListener("change", (e) => {
   const theme = e.target.value;
@@ -1255,6 +1384,17 @@ if (els.notif1Min)      els.notif1Min.value       = state.settings.reminderStart
 if (els.notif2Name)     els.notif2Name.value      = state.settings.notif2Name    || "";
 if (els.notif2Min)      els.notif2Min.value       = state.settings.reminderEndMin ?? 30;
 if (els.notifFixedTime) els.notifFixedTime.value  = state.settings.reminderFixedTime || "";
+// צליל — סנכרון select ושורת קובץ
+if (els.notifSoundSelect) {
+  els.notifSoundSelect.value = state.settings.notifSound || "default";
+}
+if (els.notifSoundFileRow) {
+  els.notifSoundFileRow.hidden = (state.settings.notifSound !== "custom");
+}
+if (els.notifSoundFileName && state.settings.notifSound === "custom") {
+  const stored = localStorage.getItem(STORAGE.soundData);
+  els.notifSoundFileName.textContent = stored ? "קובץ נטען" : "לא נבחר קובץ";
+}
 
 // החל ערכת נושא שמורה
 applyTheme(state.settings.theme || "light");

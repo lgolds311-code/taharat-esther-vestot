@@ -698,6 +698,12 @@ body {
   height: auto;
 }
 
+.sound-controls {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
 .qr-panel {
   display: flex;
   flex-direction: column;

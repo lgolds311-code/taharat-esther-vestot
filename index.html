@@ -241,6 +241,35 @@
               <input id="notif-fixed-time" class="input--text" type="time">
             </div>
 
+            <!-- ── צליל ── -->
+            <div class="setting-row setting-row--sub">
+              <div class="setting-label">
+                <div class="setting-name">צליל תזכורת</div>
+                <div class="setting-desc">הצליל שישמע עם הופעת ההתראה</div>
+              </div>
+              <div class="sound-controls">
+                <select id="notif-sound-select" class="select select--small" aria-label="צליל תזכורת">
+                  <option value="default">צליל המערכת</option>
+                  <option value="silent">ללא צליל</option>
+                  <option value="bell">פעמון</option>
+                  <option value="chime">צלצול עדין</option>
+                  <option value="beeps">שלוש פעימות</option>
+                  <option value="custom">קובץ מהמכשיר…</option>
+                </select>
+                <button id="notif-sound-test" class="btn btn--small" type="button" title="נגן דוגמה" aria-label="נגן דוגמה">▶</button>
+              </div>
+            </div>
+
+            <!-- בחירת קובץ — מוצג רק כשנבחר "קובץ מהמכשיר" -->
+            <div class="setting-row setting-row--sub" id="notif-sound-file-row" hidden>
+              <div class="setting-label">
+                <div class="setting-name">קובץ שמע</div>
+                <div class="setting-desc" id="notif-sound-file-name">לא נבחר קובץ</div>
+              </div>
+              <input id="notif-sound-file" type="file" accept="audio/*" style="display:none" aria-label="בחר קובץ שמע">
+              <button id="notif-sound-file-btn" class="btn btn--small" type="button">בחר קובץ</button>
+            </div>
+
           </div>
 
           <!-- ══ שיתוף ══ -->
