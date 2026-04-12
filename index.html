@@ -127,6 +127,7 @@
           <button class="tab-btn" role="tab" data-tab="design"  aria-selected="false">עיצוב</button>
           <button class="tab-btn" role="tab" data-tab="notif"   aria-selected="false">התראות</button>
           <button class="tab-btn" role="tab" data-tab="share"   aria-selected="false">שיתוף</button>
+          <button class="tab-btn" role="tab" data-tab="hefsek"  aria-selected="false">הפסק טהרה</button>
           <button class="tab-btn" role="tab" data-tab="contact" aria-selected="false">צור קשר</button>
         </div>
 
@@ -304,6 +305,65 @@
             <div id="qr-panel" class="qr-panel" hidden>
               <div id="qr-canvas" class="qr-canvas"></div>
               <div class="qr-url" id="qr-url-text"></div>
+            </div>
+
+          </div>
+
+          <!-- ══ לשונית: הפסק טהרה ══ -->
+          <div class="tab-pane" id="tab-hefsek" hidden>
+
+            <!-- יום מינימלי -->
+            <div class="setting-row">
+              <div class="setting-label">
+                <div class="setting-name">יום מינימלי להפסק טהרה</div>
+                <div class="setting-desc">מאיזה יום לאחר הוסת ניתן לעשות הפסק</div>
+              </div>
+              <select id="hefsek-min-day" class="select select--small" aria-label="יום מינימלי לפסיקה">
+                <option value="4">יום ד׳ (ברירת מחדל)</option>
+                <option value="5">יום ה׳</option>
+                <option value="6">יום ו׳</option>
+                <option value="7">יום ז׳</option>
+              </select>
+            </div>
+
+            <!-- תזכורות ז׳ נקיים -->
+            <div class="setting-group-label">תזכורות שבעה נקיים</div>
+
+            <div class="setting-row setting-row--sub">
+              <div class="setting-label">
+                <div class="setting-name">שעת תזכורת בדיקת בוקר</div>
+                <div class="setting-desc">ברירת מחדל: 07:00 (מהזריחה)</div>
+              </div>
+              <input id="hefsek-morning-time" class="input--text" type="time">
+            </div>
+
+            <div class="setting-row setting-row--sub">
+              <div class="setting-label">
+                <div class="setting-name">תזכורת בדיקת ערב</div>
+                <div class="setting-desc">דקות לפני שקיעה (ברירת מחדל: 30)</div>
+              </div>
+              <input id="hefsek-evening-min" class="input--number" type="number" min="5" max="120" placeholder="30">
+            </div>
+
+            <!-- תזכורת טבילה -->
+            <div class="setting-group-label">יום השביעי — טבילה</div>
+
+            <div class="setting-row setting-row--sub">
+              <div class="setting-label">
+                <div class="setting-name">תזכורת טבילה</div>
+                <div class="setting-desc">תזכורת בערב היום השביעי</div>
+              </div>
+              <button id="hefsek-mikveh-toggle" class="toggle-btn" role="switch" aria-checked="true" type="button" aria-label="הפעל תזכורת טבילה">
+                <span class="toggle-btn__knob"></span>
+              </button>
+            </div>
+
+            <div id="hefsek-mikveh-time-row" class="setting-row setting-row--sub">
+              <div class="setting-label">
+                <div class="setting-name">שעת תזכורת הטבילה</div>
+                <div class="setting-desc">ריק = לפי שקיעה (כברירת מחדל)</div>
+              </div>
+              <input id="hefsek-mikveh-time" class="input--text" type="time">
             </div>
 
           </div>

@@ -37,6 +37,12 @@ const els = {
   notif2Min:            document.querySelector("#notif2-min"),
   notif1FixedTime:      document.querySelector("#notif1-fixed-time"),
   notif2FixedTime:      document.querySelector("#notif2-fixed-time"),
+  hefsekMinDay:         document.querySelector("#hefsek-min-day"),
+  hefsekMorningTime:    document.querySelector("#hefsek-morning-time"),
+  hefsekEveningMin:     document.querySelector("#hefsek-evening-min"),
+  hefsekMikvehToggle:   document.querySelector("#hefsek-mikveh-toggle"),
+  hefsekMikvehTimeRow:  document.querySelector("#hefsek-mikveh-time-row"),
+  hefsekMikvehTime:     document.querySelector("#hefsek-mikveh-time"),
   notifSoundSelect:     document.querySelector("#notif-sound-select"),
   notifSoundTest:       document.querySelector("#notif-sound-test"),
   notifSoundFileRow:    document.querySelector("#notif-sound-file-row"),
@@ -342,6 +348,12 @@ const DEFAULT_SETTINGS = {
   reminderStartMin: 0, reminderEndMin: 30,
   notif1FixedTime: "", notif2FixedTime: "",
   notifSound: "default",
+  // ── הפסק טהרה ──
+  hefsekMinDay: 4,           // יום מינימלי להפסק (4/5/6/7)
+  hefsekMorningTime: "07:00",// שעת תזכורת בדיקת בוקר ב-ז׳ נקיים
+  hefsekEveningMin: 30,      // דקות לפני שקיעה לבדיקת ערב / הפסק טהרה
+  hefsekMikvehReminder: true,// תזכורת טבילה ביום 7
+  hefsekMikvehTime: "",      // שעה קבועה לתזכורת טבילה (ריק = לפי שקיעה)
 };
 
 function loadSettings() {
@@ -593,6 +605,16 @@ window.addEventListener("scroll",   () => positionPopover(), true);
 // ─────────────────────────────────────────────────────────────────────────────
 // App state
 // ─────────────────────────────────────────────────────────────────────────────
+//
+// מבנה רשומת יום ב-state.entries[isoKey]:
+//   tod?:           "day" | "night"          — ראיית וסת
+//   feelings?:      string                   — הערת תחושות
+//   hefsek?:        "ok" | "fail"            — תוצאת הפסק טהרה
+//   shivaNekiimDay?: 1–7                     — מספר יום בז׳ נקיים
+//   checkMorning?:  "ok" | "fail"            — בדיקת בוקר בז׳ נקיים
+//   checkEvening?:  "ok" | "fail"            — בדיקת ערב בז׳ נקיים
+//   updatedAt:      number                   — timestamp
+//
 let state = {
   viewHYear:   null,
   viewHMonth:  null,
@@ -1317,6 +1339,31 @@ els.notifSoundFile?.addEventListener("change", (e) => {
   reader.readAsDataURL(file);
 });
 
+// ── הגדרות הפסק טהרה ──
+els.hefsekMinDay?.addEventListener("change", (e) => {
+  state.settings.hefsekMinDay = parseInt(e.target.value) || 4;
+  saveSettings(state.settings);
+});
+els.hefsekMorningTime?.addEventListener("change", (e) => {
+  state.settings.hefsekMorningTime = e.target.value;
+  saveSettings(state.settings);
+});
+els.hefsekEveningMin?.addEventListener("change", (e) => {
+  state.settings.hefsekEveningMin = Math.max(0, parseInt(e.target.value) || 30);
+  saveSettings(state.settings);
+});
+els.hefsekMikvehToggle?.addEventListener("click", () => {
+  const newVal = els.hefsekMikvehToggle.getAttribute("aria-checked") !== "true";
+  els.hefsekMikvehToggle.setAttribute("aria-checked", String(newVal));
+  state.settings.hefsekMikvehReminder = newVal;
+  saveSettings(state.settings);
+  if (els.hefsekMikvehTimeRow) els.hefsekMikvehTimeRow.classList.toggle("settings-group--dimmed", !newVal);
+});
+els.hefsekMikvehTime?.addEventListener("change", (e) => {
+  state.settings.hefsekMikvehTime = e.target.value;
+  saveSettings(state.settings);
+});
+
 // ── מיתוג לשוניות ──
 document.querySelectorAll(".tab-btn[data-tab]").forEach(btn => {
   btn.addEventListener("click", () => {
@@ -1463,6 +1510,17 @@ if (els.notifSoundFileName && state.settings.notifSound === "custom") {
   const stored = localStorage.getItem(STORAGE.soundData);
   els.notifSoundFileName.textContent = stored ? "קובץ נטען" : "לא נבחר קובץ";
 }
+
+// הפסק טהרה — סנכרון UI
+if (els.hefsekMinDay)      els.hefsekMinDay.value       = String(state.settings.hefsekMinDay ?? 4);
+if (els.hefsekMorningTime) els.hefsekMorningTime.value  = state.settings.hefsekMorningTime || "07:00";
+if (els.hefsekEveningMin)  els.hefsekEveningMin.value   = state.settings.hefsekEveningMin ?? 30;
+if (els.hefsekMikvehToggle) {
+  const on = state.settings.hefsekMikvehReminder !== false;
+  els.hefsekMikvehToggle.setAttribute("aria-checked", String(on));
+  if (els.hefsekMikvehTimeRow) els.hefsekMikvehTimeRow.classList.toggle("settings-group--dimmed", !on);
+}
+if (els.hefsekMikvehTime) els.hefsekMikvehTime.value = state.settings.hefsekMikvehTime || "";
 
 // החל ערכת נושא שמורה
 applyTheme(state.settings.theme || "light");
