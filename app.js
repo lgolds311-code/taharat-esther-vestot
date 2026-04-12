@@ -496,17 +496,17 @@ function checkDailyNotifications() {
     }
   };
 
-  // ── תזכורות וסת (רק אם יש marks להיום) ──
+  // ── תזכורות וסת (רק אם יש marks ווסת להיום) ──
   const { marks } = computeMarks();
-  const todayMarks = marks[todayKey];
-  if (todayMarks?.length) {
+  const todayMarks = (marks[todayKey] || []).filter(m => m.cat === "veset");
+  if (todayMarks.length) {
     const startMin   = state.settings.reminderStartMin ?? 0;
     const endMin     = state.settings.reminderEndMin   ?? 30;
     const fixedTime1 = state.settings.notif1FixedTime || state.settings.reminderFixedTime || "";
     const fixedTime2 = state.settings.notif2FixedTime || "";
     const label1     = state.settings.notif1Name || "תחילת עונת פרישה";
     const label2     = state.settings.notif2Name || "זמן לבדיקה";
-    const marksStr   = todayMarks.join(", ");
+    const marksStr   = todayMarks.map(m => m.label).join(", ");
 
     // ── תזכורת ראשונה: פתיחת עונה ──
     if (fixedTime1) {
@@ -826,7 +826,11 @@ function computeMarks() {
   }
 
   const marks = {};
-  const mark = (iso, label) => { marks[iso] = (marks[iso] || []).concat([label]); };
+  // cat: "veset" | "hefsek-eligible" | "hefsek" | "nekiim"
+  const mark = (iso, label, cat = "veset") => {
+    if (!marks[iso]) marks[iso] = [];
+    marks[iso].push({ label, cat });
+  };
 
   // ── עונה בינונית ──
   // fullDay: מסמנת גם את הלילה שלפני (= היום הגרגוריאני הקודם)
@@ -899,11 +903,27 @@ function computeMarks() {
     sum += `\nוסת ההפלגה: הוסיפי גם רשומה קודמת כדי לחשב.`;
   }
 
+  // ── ימים כשירים להפסק טהרה ──
+  if (current) {
+    const eligibleDate = getHefsekEligibleDate(current.iso);
+    const vestDateH    = parseIsoKey(current.iso);
+    if (eligibleDate && vestDateH) {
+      const hasValidHefsekH = Object.entries(state.entries || {}).some(([iso, rec]) => {
+        if (rec?.hefsek !== "ok") return false;
+        const d = parseIsoKey(iso);
+        return d && d > vestDateH;
+      });
+      if (!hasValidHefsekH) {
+        mark(isoKey(eligibleDate), "תחילת זמן הפסק", "hefsek-eligible");
+      }
+    }
+  }
+
   // ── הפסק טהרה ──
   for (const [iso, rec] of Object.entries(state.entries || {})) {
     if (!rec) continue;
-    if      (rec.hefsek === "ok")   mark(iso, "הפסק טהרה ✦");
-    else if (rec.hefsek === "fail") mark(iso, "הפסק נכשל ✗");
+    if      (rec.hefsek === "ok")   mark(iso, "הפסק טהרה ✦", "hefsek");
+    else if (rec.hefsek === "fail") mark(iso, "הפסק נכשל ✗", "hefsek");
   }
 
   // ── שבעה נקיים ──
@@ -911,8 +931,7 @@ function computeMarks() {
   if (nekiimRange) {
     for (let i = 1; i <= 7; i++) {
       const d = new Date(nekiimRange.start.getFullYear(), nekiimRange.start.getMonth(), nekiimRange.start.getDate() + (i - 1));
-      mark(isoKey(d), `שבעה נקיים - יום ${i}`);
-      if (i === 7) mark(isoKey(d), "ערב טבילה 💧");
+      mark(isoKey(d), i === 7 ? `נקי ${i} · ערב טבילה` : `נקי ${i}`, "nekiim");
     }
   }
 
@@ -1036,12 +1055,19 @@ function buildCell({ date, muted, today, marks }) {
   cell.appendChild(numEl);
   cell.appendChild(gregEl);
 
-  if (cellMarks.length) {
+  // ── פילים לפי קטגוריה ──
+  const addPill = (cat, cssClass) => {
+    const items = cellMarks.filter(m => m.cat === cat);
+    if (!items.length) return;
     const mk = document.createElement("div");
-    mk.className   = "cell__mark";
-    mk.textContent = cellMarks.join(", ");
+    mk.className   = `cell__pill ${cssClass}`;
+    mk.textContent = items.map(m => m.label).join(" · ");
     cell.appendChild(mk);
-  }
+  };
+  addPill("veset",          "cell__pill--veset");
+  addPill("hefsek-eligible","cell__pill--hefsek-eligible");
+  addPill("hefsek",         "cell__pill--hefsek");
+  addPill("nekiim",         "cell__pill--nekiim");
 
   if (status === "day" || status === "night") {
     const st = document.createElement("div");
@@ -1054,6 +1080,28 @@ function buildCell({ date, muted, today, marks }) {
       st.appendChild(dot);
     }
     cell.appendChild(st);
+  }
+
+  // ── אינדיקטורי בדיקות בוקר/ערב ──
+  const entryRec = state.entries[key];
+  if (entryRec && (entryRec.checkMorning || entryRec.checkEvening)) {
+    const checks = document.createElement("div");
+    checks.className = "cell__checks";
+    if (entryRec.checkMorning) {
+      const sp = document.createElement("span");
+      sp.className = `cell__check cell__check--${entryRec.checkMorning}`;
+      sp.title     = entryRec.checkMorning === "ok" ? "בדיקת בוקר תקינה" : "בדיקת בוקר נכשלה";
+      sp.textContent = entryRec.checkMorning === "ok" ? "☀✓" : "☀✗";
+      checks.appendChild(sp);
+    }
+    if (entryRec.checkEvening) {
+      const sp = document.createElement("span");
+      sp.className = `cell__check cell__check--${entryRec.checkEvening}`;
+      sp.title     = entryRec.checkEvening === "ok" ? "בדיקת ערב תקינה" : "בדיקת ערב נכשלה";
+      sp.textContent = entryRec.checkEvening === "ok" ? "🌙✓" : "🌙✗";
+      checks.appendChild(sp);
+    }
+    cell.appendChild(checks);
   }
 
   cell.addEventListener("click", (e) => {
