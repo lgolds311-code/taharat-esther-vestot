@@ -609,6 +609,11 @@ body {
   white-space: nowrap;
 }
 
+/* שדות שעה — תמיד LTR כדי להציג HH:MM בסדר הנכון */
+input[type="time"] {
+  direction: ltr;
+}
+
 /* ── כפתורי הפסק טהרה / שבעה נקיים בפופ-אפ ── */
 .popover__hefsek-section {
   margin-top: 10px;
