@@ -120,172 +120,223 @@
           <div id="settings-modal-title" class="modal__title">⚙️ הגדרות</div>
           <button class="modal__x" type="button" aria-label="סגירה" id="settings-close">✕</button>
         </div>
+
+        <!-- לשוניות -->
+        <div class="modal__tabs" role="tablist" aria-label="קטגוריות הגדרות">
+          <button class="tab-btn" role="tab" data-tab="calc"    aria-selected="true" >חישובים</button>
+          <button class="tab-btn" role="tab" data-tab="design"  aria-selected="false">עיצוב</button>
+          <button class="tab-btn" role="tab" data-tab="notif"   aria-selected="false">התראות</button>
+          <button class="tab-btn" role="tab" data-tab="share"   aria-selected="false">שיתוף</button>
+          <button class="tab-btn" role="tab" data-tab="contact" aria-selected="false">צור קשר</button>
+        </div>
+
         <div class="modal__body">
 
-          <!-- ══ חישובים ══ -->
-          <div class="setting-section-header">חישובים</div>
+          <!-- ══ לשונית: חישובים ══ -->
+          <div class="tab-pane" id="tab-calc">
 
-          <!-- אור זרוע -->
-          <div class="setting-row">
-            <div class="setting-label">
-              <div class="setting-name">אור זרוע</div>
-              <div class="setting-desc">סמני עונת אור זרוע (יום/לילה שלפני הפרישה)</div>
-            </div>
-            <button id="oz-toggle" class="toggle-btn" role="switch" aria-checked="false" type="button" aria-label="הפעל אור זרוע">
-              <span class="toggle-btn__knob"></span>
-            </button>
-          </div>
-          <!-- תת-שורת אור זרוע: על אילו וסתות -->
-          <div id="oz-scope-row" class="setting-row setting-row--sub" hidden>
-            <div class="setting-label">
-              <div class="setting-name">על אילו וסתות</div>
-              <div class="setting-desc">האם לסמן אור זרוע לכל הוסתות או לעונה בינונית בלבד</div>
-            </div>
-            <select id="oz-type-select" class="select select--small" aria-label="טווח אור זרוע">
-              <option value="all">על כל העונות</option>
-              <option value="beinonit">רק על עונה בינונית</option>
-            </select>
-          </div>
-
-          <!-- חומרת יום לא -->
-          <div class="setting-row">
-            <div class="setting-label">
-              <div class="setting-name">חומרת יום ל״א</div>
-              <div class="setting-desc">סמני גם את יום 31 (בנוסף ליום 30)</div>
-            </div>
-            <button id="day31-toggle" class="toggle-btn" role="switch" aria-checked="false" type="button" aria-label="הפעל חומרת יום 31">
-              <span class="toggle-btn__knob"></span>
-            </button>
-          </div>
-
-          <!-- עונה בינונית כיממה שלמה -->
-          <div class="setting-row">
-            <div class="setting-label">
-              <div class="setting-name">עונה בינונית כיממה שלמה</div>
-              <div class="setting-desc">פרישה גם ביום וגם בלילה של יום 30 (ו-31)</div>
-            </div>
-            <button id="full-day-toggle" class="toggle-btn" role="switch" aria-checked="false" type="button" aria-label="הפעל יממה שלמה">
-              <span class="toggle-btn__knob"></span>
-            </button>
-          </div>
-
-          <!-- ══ עיצוב ══ -->
-          <div class="setting-section-header">עיצוב</div>
-
-          <div class="setting-row">
-            <div class="setting-label">
-              <div class="setting-name">עיצוב רקע</div>
-              <div class="setting-desc">בחרי את מראה האפליקציה</div>
-            </div>
-            <select id="theme-select" class="select select--small" aria-label="עיצוב רקע">
-              <option value="dark">כהה</option>
-              <option value="light">בהיר</option>
-              <option value="floral">פרחוני 🌸</option>
-            </select>
-          </div>
-
-          <!-- ══ התראות ══ -->
-          <div class="setting-section-header">התראות</div>
-
-          <!-- הפעלת התראות -->
-          <div class="setting-row">
-            <div class="setting-label">
-              <div class="setting-name">הפעלת התראות</div>
-              <div class="setting-desc">2 תזכורות לכל עונת פרישה (תחילה + בדיקה)</div>
-            </div>
-            <button id="notifications-toggle" class="toggle-btn" role="switch" aria-checked="false" type="button" aria-label="הפעל התראות">
-              <span class="toggle-btn__knob"></span>
-            </button>
-          </div>
-
-          <!-- הגדרות פירוט (מוצגות רק כשהתראות מופעלות) -->
-          <div id="notif-sub" hidden>
-
-            <div class="setting-row setting-row--sub">
+            <div class="setting-row">
               <div class="setting-label">
-                <div class="setting-name">שם תזכורת פתיחת עונה</div>
-                <div class="setting-desc">מוצגת בתחילת העונה (זריחה/שקיעה)</div>
+                <div class="setting-name">אור זרוע</div>
+                <div class="setting-desc">סמני עונת אור זרוע (יום/לילה שלפני הפרישה)</div>
               </div>
-              <input id="notif1-name" class="input--text" type="text" maxlength="40" placeholder="תחילת עונת פרישה">
+              <button id="oz-toggle" class="toggle-btn" role="switch" aria-checked="false" type="button" aria-label="הפעל אור זרוע">
+                <span class="toggle-btn__knob"></span>
+              </button>
+            </div>
+            <div id="oz-scope-row" class="setting-row setting-row--sub" hidden>
+              <div class="setting-label">
+                <div class="setting-name">על אילו וסתות</div>
+                <div class="setting-desc">האם לסמן אור זרוע לכל הוסתות או לעונה בינונית בלבד</div>
+              </div>
+              <select id="oz-type-select" class="select select--small" aria-label="טווח אור זרוע">
+                <option value="all">על כל העונות</option>
+                <option value="beinonit">רק על עונה בינונית</option>
+              </select>
             </div>
 
-            <div class="setting-row setting-row--sub">
+            <div class="setting-row">
               <div class="setting-label">
-                <div class="setting-name">דקות לפני תחילת העונה</div>
-                <div class="setting-desc">0 = בדיוק בזמן הזריחה/שקיעה</div>
+                <div class="setting-name">חומרת יום ל״א</div>
+                <div class="setting-desc">סמני גם את יום 31 (בנוסף ליום 30)</div>
               </div>
-              <input id="notif1-min" class="input--number" type="number" min="0" max="120" placeholder="0">
+              <button id="day31-toggle" class="toggle-btn" role="switch" aria-checked="false" type="button" aria-label="הפעל חומרת יום 31">
+                <span class="toggle-btn__knob"></span>
+              </button>
             </div>
 
-            <div class="setting-row setting-row--sub">
+            <div class="setting-row">
               <div class="setting-label">
-                <div class="setting-name">שם תזכורת הבדיקה</div>
-                <div class="setting-desc">מוצגת לפני סוף העונה</div>
+                <div class="setting-name">עונה בינונית כיממה שלמה</div>
+                <div class="setting-desc">פרישה גם ביום וגם בלילה של יום 30 (ו-31)</div>
               </div>
-              <input id="notif2-name" class="input--text" type="text" maxlength="40" placeholder="זמן לבדיקה">
-            </div>
-
-            <div class="setting-row setting-row--sub">
-              <div class="setting-label">
-                <div class="setting-name">דקות לפני סוף העונה</div>
-                <div class="setting-desc">ברירת מחדל: 30 דקות (לפני שקיעה/זריחה)</div>
-              </div>
-              <input id="notif2-min" class="input--number" type="number" min="5" max="120" placeholder="30">
-            </div>
-
-            <div class="setting-row setting-row--sub">
-              <div class="setting-label">
-                <div class="setting-name">שעה קבועה לתזכורת</div>
-                <div class="setting-desc">השאר ריק לחישוב לפי שמש. אם מוגדר — ישלח בשעה זו</div>
-              </div>
-              <input id="notif-fixed-time" class="input--text" type="time">
-            </div>
-
-            <!-- ── צליל ── -->
-            <div class="setting-row setting-row--sub">
-              <div class="setting-label">
-                <div class="setting-name">צליל תזכורת</div>
-                <div class="setting-desc">הצליל שישמע עם הופעת ההתראה</div>
-              </div>
-              <div class="sound-controls">
-                <select id="notif-sound-select" class="select select--small" aria-label="צליל תזכורת">
-                  <option value="default">צליל המערכת</option>
-                  <option value="silent">ללא צליל</option>
-                  <option value="bell">פעמון</option>
-                  <option value="chime">צלצול עדין</option>
-                  <option value="beeps">שלוש פעימות</option>
-                  <option value="custom">קובץ מהמכשיר…</option>
-                </select>
-                <button id="notif-sound-test" class="btn btn--small" type="button" title="נגן דוגמה" aria-label="נגן דוגמה">▶</button>
-              </div>
-            </div>
-
-            <!-- בחירת קובץ — מוצג רק כשנבחר "קובץ מהמכשיר" -->
-            <div class="setting-row setting-row--sub" id="notif-sound-file-row" hidden>
-              <div class="setting-label">
-                <div class="setting-name">קובץ שמע</div>
-                <div class="setting-desc" id="notif-sound-file-name">לא נבחר קובץ</div>
-              </div>
-              <input id="notif-sound-file" type="file" accept="audio/*" style="display:none" aria-label="בחר קובץ שמע">
-              <button id="notif-sound-file-btn" class="btn btn--small" type="button">בחר קובץ</button>
+              <button id="full-day-toggle" class="toggle-btn" role="switch" aria-checked="false" type="button" aria-label="הפעל יממה שלמה">
+                <span class="toggle-btn__knob"></span>
+              </button>
             </div>
 
           </div>
 
-          <!-- ══ שיתוף ══ -->
-          <div class="setting-section-header">שיתוף</div>
+          <!-- ══ לשונית: עיצוב ══ -->
+          <div class="tab-pane" id="tab-design" hidden>
 
-          <!-- QR -->
-          <div class="setting-row setting-row--qr">
-            <div class="setting-label">
-              <div class="setting-name">שיתוף האפליקציה</div>
-              <div class="setting-desc">קוד QR לשיתוף הקישור לאפליקציה</div>
+            <div class="setting-row">
+              <div class="setting-label">
+                <div class="setting-name">עיצוב רקע</div>
+                <div class="setting-desc">בחרי את מראה האפליקציה</div>
+              </div>
+              <select id="theme-select" class="select select--small" aria-label="עיצוב רקע">
+                <option value="dark">כהה</option>
+                <option value="light">בהיר</option>
+                <option value="floral">פרחוני 🌸</option>
+              </select>
             </div>
-            <button id="qr-btn" class="btn btn--ghost btn--small" type="button">הצג QR</button>
+
           </div>
-          <div id="qr-panel" class="qr-panel" hidden>
-            <div id="qr-canvas" class="qr-canvas"></div>
-            <div class="qr-url" id="qr-url-text"></div>
+
+          <!-- ══ לשונית: התראות ══ -->
+          <div class="tab-pane" id="tab-notif" hidden>
+
+            <div class="setting-row">
+              <div class="setting-label">
+                <div class="setting-name">הפעלת התראות</div>
+                <div class="setting-desc">תזכורות לעונות פרישה</div>
+              </div>
+              <button id="notifications-toggle" class="toggle-btn" role="switch" aria-checked="false" type="button" aria-label="הפעל התראות">
+                <span class="toggle-btn__knob"></span>
+              </button>
+            </div>
+
+            <div id="notif-sub" hidden>
+
+              <!-- תזכורת ראשונה -->
+              <div class="setting-group-label">תזכורת ראשונה — פתיחת עונה</div>
+
+              <div class="setting-row setting-row--sub">
+                <div class="setting-label">
+                  <div class="setting-name">שם התזכורת</div>
+                  <div class="setting-desc">הטקסט שיופיע בהתראה</div>
+                </div>
+                <input id="notif1-name" class="input--text" type="text" maxlength="40" placeholder="תחילת עונת פרישה">
+              </div>
+              <div class="setting-row setting-row--sub">
+                <div class="setting-label">
+                  <div class="setting-name">דקות לפני תחילת העונה</div>
+                  <div class="setting-desc">0 = בדיוק בזמן הזריחה/שקיעה</div>
+                </div>
+                <input id="notif1-min" class="input--number" type="number" min="0" max="120" placeholder="0">
+              </div>
+              <div class="setting-row setting-row--sub">
+                <div class="setting-label">
+                  <div class="setting-name">שעה קבועה</div>
+                  <div class="setting-desc">אם מוגדר — יגבר על חישוב לפי שמש</div>
+                </div>
+                <input id="notif1-fixed-time" class="input--text" type="time">
+              </div>
+
+              <!-- תזכורת שנייה -->
+              <div class="setting-group-label">תזכורת שנייה — זמן לבדיקה</div>
+
+              <div class="setting-row setting-row--sub">
+                <div class="setting-label">
+                  <div class="setting-name">שם התזכורת</div>
+                  <div class="setting-desc">הטקסט שיופיע בהתראה</div>
+                </div>
+                <input id="notif2-name" class="input--text" type="text" maxlength="40" placeholder="זמן לבדיקה">
+              </div>
+              <div class="setting-row setting-row--sub">
+                <div class="setting-label">
+                  <div class="setting-name">דקות לפני סוף העונה</div>
+                  <div class="setting-desc">ברירת מחדל: 30 דקות (לפני שקיעה/זריחה)</div>
+                </div>
+                <input id="notif2-min" class="input--number" type="number" min="5" max="120" placeholder="30">
+              </div>
+              <div class="setting-row setting-row--sub">
+                <div class="setting-label">
+                  <div class="setting-name">שעה קבועה</div>
+                  <div class="setting-desc">אם מוגדר — יגבר על חישוב לפי שמש</div>
+                </div>
+                <input id="notif2-fixed-time" class="input--text" type="time">
+              </div>
+
+              <!-- צליל -->
+              <div class="setting-group-label">צליל</div>
+
+              <div class="setting-row setting-row--sub">
+                <div class="setting-label">
+                  <div class="setting-name">צליל תזכורת</div>
+                  <div class="setting-desc">הצליל שישמע עם הופעת ההתראה</div>
+                </div>
+                <div class="sound-controls">
+                  <select id="notif-sound-select" class="select select--small" aria-label="צליל תזכורת">
+                    <option value="default">צליל המערכת</option>
+                    <option value="silent">ללא צליל</option>
+                    <option value="bell">פעמון</option>
+                    <option value="chime">צלצול עדין</option>
+                    <option value="beeps">שלוש פעימות</option>
+                    <option value="custom">קובץ מהמכשיר…</option>
+                  </select>
+                  <button id="notif-sound-test" class="btn btn--small" type="button" title="נגן דוגמה" aria-label="נגן דוגמה">▶</button>
+                </div>
+              </div>
+              <div class="setting-row setting-row--sub" id="notif-sound-file-row" hidden>
+                <div class="setting-label">
+                  <div class="setting-name">קובץ שמע</div>
+                  <div class="setting-desc" id="notif-sound-file-name">לא נבחר קובץ</div>
+                </div>
+                <input id="notif-sound-file" type="file" accept="audio/*" style="display:none" aria-label="בחר קובץ שמע">
+                <button id="notif-sound-file-btn" class="btn btn--small" type="button">בחר קובץ</button>
+              </div>
+
+            </div>
+          </div>
+
+          <!-- ══ לשונית: שיתוף ══ -->
+          <div class="tab-pane" id="tab-share" hidden>
+
+            <div class="setting-row setting-row--qr">
+              <div class="setting-label">
+                <div class="setting-name">שיתוף האפליקציה</div>
+                <div class="setting-desc">קוד QR לשיתוף הקישור לאפליקציה</div>
+              </div>
+              <button id="qr-btn" class="btn btn--ghost btn--small" type="button">הצג QR</button>
+            </div>
+            <div id="qr-panel" class="qr-panel" hidden>
+              <div id="qr-canvas" class="qr-canvas"></div>
+              <div class="qr-url" id="qr-url-text"></div>
+            </div>
+
+          </div>
+
+          <!-- ══ לשונית: צור קשר ══ -->
+          <div class="tab-pane" id="tab-contact" hidden>
+
+            <div class="contact-intro">
+              <div class="setting-name">דיווח על תקלות ופניות</div>
+              <div class="setting-desc">מלאי את הפרטים ואחזור אלייך בהקדם</div>
+            </div>
+
+            <form id="contact-form" class="contact-form" novalidate>
+              <div class="form-group">
+                <label class="form-label" for="contact-name">שם *</label>
+                <input id="contact-name" name="name" type="text" class="input--text input--full" placeholder="שמך" required>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="contact-phone">טלפון</label>
+                <input id="contact-phone" name="phone" type="tel" class="input--text input--full" placeholder="050-0000000">
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="contact-email">מייל *</label>
+                <input id="contact-email" name="email" type="email" class="input--text input--full" placeholder="your@email.com" required>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="contact-message">הודעה *</label>
+                <textarea id="contact-message" name="message" class="input--textarea" placeholder="תיאור הבעיה, הצעה לשיפור, או כל פנייה אחרת..." required></textarea>
+              </div>
+              <button type="submit" class="btn btn--primary btn--full" id="contact-submit">שליחה</button>
+              <div id="contact-status" class="contact-status" hidden></div>
+            </form>
+
           </div>
 
         </div>

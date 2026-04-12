@@ -35,7 +35,8 @@ const els = {
   notif1Min:            document.querySelector("#notif1-min"),
   notif2Name:           document.querySelector("#notif2-name"),
   notif2Min:            document.querySelector("#notif2-min"),
-  notifFixedTime:       document.querySelector("#notif-fixed-time"),
+  notif1FixedTime:      document.querySelector("#notif1-fixed-time"),
+  notif2FixedTime:      document.querySelector("#notif2-fixed-time"),
   notifSoundSelect:     document.querySelector("#notif-sound-select"),
   notifSoundTest:       document.querySelector("#notif-sound-test"),
   notifSoundFileRow:    document.querySelector("#notif-sound-file-row"),
@@ -338,7 +339,8 @@ const DEFAULT_SETTINGS = {
   theme: "light",
   notificationsEnabled: false,
   notif1Name: "", notif2Name: "",
-  reminderStartMin: 0, reminderEndMin: 30, reminderFixedTime: "",
+  reminderStartMin: 0, reminderEndMin: 30,
+  notif1FixedTime: "", notif2FixedTime: "",
   notifSound: "default",
 };
 
@@ -449,11 +451,12 @@ function checkDailyNotifications() {
   const sun = getSunTimes(now, loc.lat, loc.lng);
   if (!sun) return;
 
-  const startMin  = state.settings.reminderStartMin ?? 0;
-  const endMin    = state.settings.reminderEndMin   ?? 30;
-  const fixedTime = state.settings.reminderFixedTime || "";
-  const label1    = state.settings.notif1Name || "תחילת עונת פרישה";
-  const label2    = state.settings.notif2Name || "זמן לבדיקה";
+  const startMin   = state.settings.reminderStartMin ?? 0;
+  const endMin     = state.settings.reminderEndMin   ?? 30;
+  const fixedTime1 = state.settings.notif1FixedTime || state.settings.reminderFixedTime || "";
+  const fixedTime2 = state.settings.notif2FixedTime || "";
+  const label1     = state.settings.notif1Name || "תחילת עונת פרישה";
+  const label2     = state.settings.notif2Name || "זמן לבדיקה";
   const marksStr  = todayMarks.join(", ");
 
   /** שליחת התראה אחת (אם לא נשלחה עדיין) */
@@ -483,16 +486,14 @@ function checkDailyNotifications() {
     }
   };
 
-  if (fixedTime) {
-    // ── שעה קבועה ──
-    const [hh, mm] = fixedTime.split(":").map(Number);
-    const t = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hh, mm);
-    scheduleAt(t, `fixed-${fixedTime}`, label1, marksStr);
-  } else {
-    // ── לפי שמש ──
-    const { sunrise, sunset } = sun;
+  const { sunrise, sunset } = sun;
 
-    // תזכורת תחילת עונה — לפני זריחה ולפני שקיעה
+  // ── תזכורת ראשונה: פתיחת עונה ──
+  if (fixedTime1) {
+    const [hh, mm] = fixedTime1.split(":").map(Number);
+    const t = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hh, mm);
+    scheduleAt(t, `fixed1-${fixedTime1}`, label1, marksStr);
+  } else {
     scheduleAt(
       new Date(sunrise.getTime() - startMin * 60_000),
       "sr-start", label1,
@@ -503,8 +504,14 @@ function checkDailyNotifications() {
       "ss-start", label1,
       `שקיעה בשעה ${formatILTime(sunset)} — ${marksStr}`
     );
+  }
 
-    // תזכורת בדיקה (לפני סוף עונה) — לפני זריחה ולפני שקיעה
+  // ── תזכורת שנייה: זמן לבדיקה ──
+  if (fixedTime2) {
+    const [hh, mm] = fixedTime2.split(":").map(Number);
+    const t = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hh, mm);
+    scheduleAt(t, `fixed2-${fixedTime2}`, label2, marksStr);
+  } else {
     scheduleAt(
       new Date(sunrise.getTime() - endMin * 60_000),
       "sr-end", label2,
@@ -1246,8 +1253,12 @@ els.notif2Min?.addEventListener("change", (e) => {
   state.settings.reminderEndMin = Math.max(0, parseInt(e.target.value) || 30);
   saveSettings(state.settings);
 });
-els.notifFixedTime?.addEventListener("change", (e) => {
-  state.settings.reminderFixedTime = e.target.value;
+els.notif1FixedTime?.addEventListener("change", (e) => {
+  state.settings.notif1FixedTime = e.target.value;
+  saveSettings(state.settings);
+});
+els.notif2FixedTime?.addEventListener("change", (e) => {
+  state.settings.notif2FixedTime = e.target.value;
   saveSettings(state.settings);
 });
 
@@ -1304,6 +1315,62 @@ els.notifSoundFile?.addEventListener("change", (e) => {
     }
   };
   reader.readAsDataURL(file);
+});
+
+// ── מיתוג לשוניות ──
+document.querySelectorAll(".tab-btn[data-tab]").forEach(btn => {
+  btn.addEventListener("click", () => {
+    const tab = btn.dataset.tab;
+    document.querySelectorAll(".tab-btn").forEach(b => b.setAttribute("aria-selected", "false"));
+    document.querySelectorAll(".tab-pane").forEach(p => { p.hidden = true; });
+    btn.setAttribute("aria-selected", "true");
+    const pane = document.getElementById(`tab-${tab}`);
+    if (pane) pane.hidden = false;
+  });
+});
+
+// ── טופס צור קשר ──
+document.getElementById("contact-form")?.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const form     = e.target;
+  const btn      = document.getElementById("contact-submit");
+  const statusEl = document.getElementById("contact-status");
+
+  // ולידציה בסיסית
+  const name    = form.querySelector("#contact-name")?.value.trim();
+  const email   = form.querySelector("#contact-email")?.value.trim();
+  const message = form.querySelector("#contact-message")?.value.trim();
+  if (!name || !email || !message) {
+    statusEl.textContent = "נא למלא את כל שדות החובה (*)";
+    statusEl.className   = "contact-status contact-status--err";
+    statusEl.hidden      = false;
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = "שולח…";
+  statusEl.hidden = true;
+
+  try {
+    const data = new FormData(form);
+    data.append("_subject", "פנייה מאפליקציית טהרת אסתר");
+    const res = await fetch("https://formsubmit.co/ajax/lgolds311@gmail.com", {
+      method: "POST",
+      headers: { "Accept": "application/json" },
+      body: data,
+    });
+    if (!res.ok) throw new Error();
+    statusEl.textContent = "הפנייה נשלחה בהצלחה! נחזור אלייך בהקדם.";
+    statusEl.className   = "contact-status contact-status--ok";
+    form.reset();
+  } catch {
+    statusEl.textContent = "שגיאה בשליחה. אפשר לנסות שוב, או לפנות ישירות ל-lgolds311@gmail.com";
+    statusEl.className   = "contact-status contact-status--err";
+  } finally {
+    statusEl.hidden  = false;
+    btn.disabled     = false;
+    btn.textContent  = "שליחה";
+  }
 });
 
 // בחירת ערכת נושא
@@ -1382,8 +1449,9 @@ if (els.notifSub)       els.notifSub.hidden       = !_notifActive;
 if (els.notif1Name)     els.notif1Name.value      = state.settings.notif1Name    || "";
 if (els.notif1Min)      els.notif1Min.value       = state.settings.reminderStartMin ?? 0;
 if (els.notif2Name)     els.notif2Name.value      = state.settings.notif2Name    || "";
-if (els.notif2Min)      els.notif2Min.value       = state.settings.reminderEndMin ?? 30;
-if (els.notifFixedTime) els.notifFixedTime.value  = state.settings.reminderFixedTime || "";
+if (els.notif2Min)       els.notif2Min.value       = state.settings.reminderEndMin ?? 30;
+if (els.notif1FixedTime) els.notif1FixedTime.value = state.settings.notif1FixedTime || "";
+if (els.notif2FixedTime) els.notif2FixedTime.value = state.settings.notif2FixedTime || "";
 // צליל — סנכרון select ושורת קובץ
 if (els.notifSoundSelect) {
   els.notifSoundSelect.value = state.settings.notifSound || "default";
