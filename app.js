@@ -642,6 +642,79 @@ function adjustForNight(date, tod) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// הפסק טהרה — חישובים
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * מחזיר את התאריך המוקדם ביותר שבו מותר לעשות הפסק טהרה.
+ * @param {string} vestIsoKey  — מפתח ISO של יום תחילת הווסת
+ * @returns {Date|null}
+ */
+function getHefsekEligibleDate(vestIsoKey) {
+  const vestDate = parseIsoKey(vestIsoKey);
+  if (!vestDate) return null;
+  const minDay = state.settings?.hefsekMinDay ?? 4;
+  // יום 1 = יום הווסת עצמו, ולכן מוסיפים (minDay - 1) ימים
+  return new Date(vestDate.getFullYear(), vestDate.getMonth(), vestDate.getDate() + (minDay - 1));
+}
+
+/**
+ * מחפש את ההפסק הטהרה האחרון שהצליח ובודק שהספירה לא נשברה אחריו.
+ * ספירה "נשברה" אם באחד מ-7 הימים שלאחר ההפסק יש:
+ *   - ראיית ווסת (tod: "day" | "night")
+ *   - בדיקת בוקר או ערב שנכשלה (checkMorning/checkEvening: "fail")
+ * @returns {{ start: Date, end: Date, hefsekIso: string }|null}
+ *   start  = יום 1 (מחרת ההפסק), end = יום 7, hefsekIso = תאריך ההפסק עצמו
+ */
+function getShivaNekiimRange() {
+  // מיון רשומות לפי תאריך, מהחדש לישן
+  const sorted = Object.entries(state.entries || {})
+    .map(([iso, rec]) => ({ iso, rec }))
+    .filter(({ iso }) => parseIsoKey(iso) !== null)
+    .sort((a, b) => parseIsoKey(b.iso) - parseIsoKey(a.iso));
+
+  // מציאת ההפסק האחרון שהצליח
+  const hefsekEntry = sorted.find(({ rec }) => rec?.hefsek === "ok");
+  if (!hefsekEntry) return null;
+
+  const hefsekDate = parseIsoKey(hefsekEntry.iso);
+  if (!hefsekDate) return null;
+
+  // 7 ימי ספירה: מחרת ההפסק (יום 1) עד יום 7
+  for (let i = 1; i <= 7; i++) {
+    const d   = new Date(hefsekDate.getFullYear(), hefsekDate.getMonth(), hefsekDate.getDate() + i);
+    const key = isoKey(d);
+    const rec = state.entries?.[key];
+    if (!rec) continue;
+    // ראיית ווסת — שוברת את הספירה
+    if (rec.tod === "day" || rec.tod === "night") return null;
+    // בדיקה שנכשלה — שוברת את הספירה
+    if (rec.checkMorning === "fail" || rec.checkEvening === "fail") return null;
+  }
+
+  const start = new Date(hefsekDate.getFullYear(), hefsekDate.getMonth(), hefsekDate.getDate() + 1);
+  const end   = new Date(hefsekDate.getFullYear(), hefsekDate.getMonth(), hefsekDate.getDate() + 7);
+  return { start, end, hefsekIso: hefsekEntry.iso };
+}
+
+/**
+ * בודק אם תאריך נתון נמצא בתוך ז׳ נקיים פעילים.
+ * @param {string} isoKeyParam  — מפתח ISO של התאריך לבדיקה
+ * @returns {number|null}  — מספר היום (1–7) או null אם אינו בתוך הטווח
+ */
+function isShivaNekiimDay(isoKeyParam) {
+  const range = getShivaNekiimRange();
+  if (!range) return null;
+  const d = parseIsoKey(isoKeyParam);
+  if (!d) return null;
+  const startMs = range.start.getTime();
+  const endMs   = range.end.getTime();
+  const dMs     = d.getTime();
+  if (dMs < startMs || dMs > endMs) return null;
+  return Math.round((dMs - startMs) / 86400000) + 1; // 1 = יום ראשון
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Calculations (marks + summary)
 // ─────────────────────────────────────────────────────────────────────────────
 /** מחזיר תאריך גרגוריאני יום אחד לפני — עבור חישוב אור זרוע */
