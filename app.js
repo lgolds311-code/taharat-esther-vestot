@@ -25,6 +25,14 @@ const els = {
   fullDayToggle:  document.querySelector("#full-day-toggle"),
   themeSelect:          document.querySelector("#theme-select"),
   notificationsToggle:  document.querySelector("#notifications-toggle"),
+  ozScopeRow:           document.querySelector("#oz-scope-row"),
+  ozTypeSelect:         document.querySelector("#oz-type-select"),
+  notifSub:             document.querySelector("#notif-sub"),
+  notif1Name:           document.querySelector("#notif1-name"),
+  notif1Min:            document.querySelector("#notif1-min"),
+  notif2Name:           document.querySelector("#notif2-name"),
+  notif2Min:            document.querySelector("#notif2-min"),
+  notifFixedTime:       document.querySelector("#notif-fixed-time"),
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -314,7 +322,14 @@ function saveJson(key, value) {
 // ─────────────────────────────────────────────────────────────────────────────
 // Settings
 // ─────────────────────────────────────────────────────────────────────────────
-const DEFAULT_SETTINGS = { ozEnabled: false, day31Enabled: false, fullDayEnabled: false, theme: "light", notificationsEnabled: false };
+const DEFAULT_SETTINGS = {
+  ozEnabled: false, ozType: "all",
+  day31Enabled: false, fullDayEnabled: false,
+  theme: "light",
+  notificationsEnabled: false,
+  notif1Name: "", notif2Name: "",
+  reminderStartMin: 0, reminderEndMin: 30, reminderFixedTime: "",
+};
 
 function loadSettings() {
   return { ...DEFAULT_SETTINGS, ...loadJson(STORAGE.settings, {}) };
@@ -336,27 +351,93 @@ function checkDailyNotifications() {
   if (!state.settings?.notificationsEnabled) return;
   if (Notification.permission !== "granted") return;
 
-  const todayKey = isoKey(new Date());
-  const lastSent = localStorage.getItem(STORAGE.lastNotification);
+  const now      = new Date();
+  const todayKey = isoKey(now);
 
-  // כבר שלחנו היום — לא שולחים שוב
-  if (lastSent === todayKey) return;
+  // טעינת רשומת "מה נשלח היום" — { "YYYY-MM-DD": ["id1","id2",...] }
+  let sentLog = {};
+  try { sentLog = JSON.parse(localStorage.getItem(STORAGE.lastNotification) || "{}"); } catch {}
+  // ניקוי תאריכים ישנים
+  for (const k of Object.keys(sentLog)) { if (k !== todayKey) delete sentLog[k]; }
+  if (!sentLog[todayKey]) sentLog[todayKey] = [];
+  const sentSet = new Set(sentLog[todayKey]);
+
+  const saveSent = () => {
+    sentLog[todayKey] = [...sentSet];
+    localStorage.setItem(STORAGE.lastNotification, JSON.stringify(sentLog));
+  };
 
   const { marks } = computeMarks();
   const todayMarks = marks[todayKey];
   if (!todayMarks || !todayMarks.length) return;
 
-  const body = "היום יש עונת פרישה: " + todayMarks.join(", ");
-  try {
-    new Notification("טהרת אסתר - תזכורת", {
-      body,
-      icon: "./icon.svg",
-      lang: "he",
-      dir: "rtl",
-    });
-    localStorage.setItem(STORAGE.lastNotification, todayKey);
-  } catch {
-    // Notification נכשל (למשל iOS Safari ללא PWA) — יציאה שקטה
+  const loc = loadLocation();
+  const sun = getSunTimes(now, loc.lat, loc.lng);
+  if (!sun) return;
+
+  const startMin  = state.settings.reminderStartMin ?? 0;
+  const endMin    = state.settings.reminderEndMin   ?? 30;
+  const fixedTime = state.settings.reminderFixedTime || "";
+  const label1    = state.settings.notif1Name || "תחילת עונת פרישה";
+  const label2    = state.settings.notif2Name || "זמן לבדיקה";
+  const marksStr  = todayMarks.join(", ");
+
+  /** שליחת התראה אחת (אם לא נשלחה עדיין) */
+  const send = (id, title, body) => {
+    if (sentSet.has(id)) return;
+    try {
+      new Notification(`טהרת אסתר — ${title}`, {
+        body, icon: "./icon.svg", lang: "he", dir: "rtl",
+      });
+      sentSet.add(id);
+      saveSent();
+    } catch {}
+  };
+
+  /** תזמון התראה — מיידית אם הזמן כבר עבר, אחרת setTimeout */
+  const scheduleAt = (targetTime, id, title, body) => {
+    const delay = targetTime.getTime() - now.getTime();
+    if (delay < -60_000) return;          // עבר לפני יותר מדקה — דלג
+    if (delay > 20 * 3_600_000) return;   // רחוק מדי (מעבר ל-20 שעות)
+    if (delay <= 0) {
+      send(id, title, body);
+    } else {
+      setTimeout(() => send(id, title, body), delay);
+    }
+  };
+
+  if (fixedTime) {
+    // ── שעה קבועה ──
+    const [hh, mm] = fixedTime.split(":").map(Number);
+    const t = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hh, mm);
+    scheduleAt(t, `fixed-${fixedTime}`, label1, marksStr);
+  } else {
+    // ── לפי שמש ──
+    const { sunrise, sunset } = sun;
+
+    // תזכורת תחילת עונה — לפני זריחה ולפני שקיעה
+    scheduleAt(
+      new Date(sunrise.getTime() - startMin * 60_000),
+      "sr-start", label1,
+      `זריחה בשעה ${formatILTime(sunrise)} — ${marksStr}`
+    );
+    scheduleAt(
+      new Date(sunset.getTime() - startMin * 60_000),
+      "ss-start", label1,
+      `שקיעה בשעה ${formatILTime(sunset)} — ${marksStr}`
+    );
+
+    // תזכורת בדיקה (לפני סוף עונה) — לפני זריחה ולפני שקיעה
+    scheduleAt(
+      new Date(sunrise.getTime() - endMin * 60_000),
+      "sr-end", label2,
+      `עוד ${endMin} דק׳ עד הזריחה — ${marksStr}`
+    );
+    scheduleAt(
+      new Date(sunset.getTime() - endMin * 60_000),
+      "ss-end", label2,
+      `עוד ${endMin} דק׳ עד השקיעה — ${marksStr}`
+    );
   }
 }
 
@@ -466,6 +547,7 @@ function computeMarks() {
   if (!current) return { marks: {}, summary: "לחצי על תאריך כדי לרשום יום/לילה." };
 
   const oz       = state.settings?.ozEnabled;
+  const ozType   = state.settings?.ozType || "all";
   const day31    = state.settings?.day31Enabled;
   const fullDay  = state.settings?.fullDayEnabled;
 
@@ -526,11 +608,13 @@ function computeMarks() {
   if (oz) {
     // אור זרוע = יום אחד לפני תאריך הפרישה הגרגוריאני
     const oz1 = prevDay(rule1.greg());
-    const oz2 = prevDay(rule2.greg());
     mark(isoKey(oz1), "אור זרוע (בינונית)");
-    mark(isoKey(oz2), "אור זרוע (חודש)");
     sum += `\nאור זרוע (בינונית): ${hebFullGem(oz1)}`;
-    sum += `\nאור זרוע (חודש): ${hebFullGem(oz2)}`;
+    if (ozType !== "beinonit") {
+      const oz2 = prevDay(rule2.greg());
+      mark(isoKey(oz2), "אור זרוע (חודש)");
+      sum += `\nאור זרוע (חודש): ${hebFullGem(oz2)}`;
+    }
   }
 
   // ── וסת ההפלגה ──
@@ -548,7 +632,7 @@ function computeMarks() {
     sum += `\nוסת ההפלגה: ${interval} ימים → ${hebFullGem(rule3.greg())}`;
     if (fullDay) sum += ` (+ לילה מוקדם: ${hebFullGem(prevDay(rule3.greg()))})`;
 
-    if (oz) {
+    if (oz && ozType !== "beinonit") {
       const oz3 = prevDay(rule3.greg());
       mark(isoKey(oz3), "אור זרוע (הפלגה)");
       sum += `\nאור זרוע (הפלגה): ${hebFullGem(oz3)}`;
@@ -754,9 +838,17 @@ function buildCell({ date, muted, today, marks }) {
       const dayClass   = isDay ? "btn btn--primary" : "btn";
       const nightClass = isDay ? "btn"               : "btn btn--primary";
 
+      // הרגשות מהוסת הקודמת (לכפתור העתקה)
+      const allSorted   = getSortedEntries();
+      const prevEntry   = allSorted[0];
+      const prevFeelings = prevEntry ? (state.entries[prevEntry.iso]?.feelings || "") : "";
+      const copyBtnHtml  = prevFeelings
+        ? `<button type="button" class="btn btn--ghost btn--small popover__copy-prev">העתק הרגשות מהוסת הקודמת</button>`
+        : "";
+
       openPopover({
         title,
-        bodyHTML: `<div class="popover__times">☀️ זריחה: ${srStr}&nbsp;&nbsp;&nbsp;🌇 שקיעה: ${ssStr}</div><label class="popover__feelings-label">הרגשות גוף (אופציונלי)<textarea class="popover__feelings-input" placeholder="למשל: כאב ראש, עייפות, כאבי בטן..."></textarea></label><div class="popover__question">איך לסמן?</div>`,
+        bodyHTML: `<div class="popover__times">☀️ זריחה: ${srStr}&nbsp;&nbsp;&nbsp;🌇 שקיעה: ${ssStr}</div><label class="popover__feelings-label">הרגשות גוף (אופציונלי)<textarea class="popover__feelings-input" placeholder="למשל: כאב ראש, עייפות, כאבי בטן..."></textarea></label>${copyBtnHtml}<div class="popover__question">איך לסמן?</div>`,
         actions: [
           {
             label: "יום ☀️", className: dayClass,
@@ -783,6 +875,16 @@ function buildCell({ date, muted, today, marks }) {
         ],
         anchorRect: anchor,
       });
+      // חיבור כפתור "העתק הרגשות מהוסת הקודמת"
+      if (prevFeelings) {
+        const copyBtn = els.popoverBody.querySelector(".popover__copy-prev");
+        if (copyBtn) {
+          copyBtn.addEventListener("click", () => {
+            const ta = els.popoverBody.querySelector(".popover__feelings-input");
+            if (ta) ta.value = prevFeelings;
+          });
+        }
+      }
     }
   });
 
@@ -927,6 +1029,14 @@ els.ozToggle?.addEventListener("click", () => {
   els.ozToggle.setAttribute("aria-checked", String(newVal));
   state.settings.ozEnabled = newVal;
   saveSettings(state.settings);
+  if (els.ozScopeRow) els.ozScopeRow.hidden = !newVal;
+  renderMonth();
+});
+
+// בחירת טווח אור זרוע
+els.ozTypeSelect?.addEventListener("change", (e) => {
+  state.settings.ozType = e.target.value;
+  saveSettings(state.settings);
   renderMonth();
 });
 
@@ -957,6 +1067,7 @@ els.notificationsToggle?.addEventListener("click", async () => {
     els.notificationsToggle.setAttribute("aria-checked", "false");
     state.settings.notificationsEnabled = false;
     saveSettings(state.settings);
+    if (els.notifSub) els.notifSub.hidden = true;
     return;
   }
 
@@ -971,6 +1082,7 @@ els.notificationsToggle?.addEventListener("click", async () => {
     els.notificationsToggle.setAttribute("aria-checked", "true");
     state.settings.notificationsEnabled = true;
     saveSettings(state.settings);
+    if (els.notifSub) els.notifSub.hidden = false;
     return;
   }
 
@@ -987,12 +1099,36 @@ els.notificationsToggle?.addEventListener("click", async () => {
     els.notificationsToggle.setAttribute("aria-checked", "true");
     state.settings.notificationsEnabled = true;
     saveSettings(state.settings);
+    if (els.notifSub) els.notifSub.hidden = false;
   } else {
     els.notificationsToggle.setAttribute("aria-checked", "false");
     state.settings.notificationsEnabled = false;
     saveSettings(state.settings);
+    if (els.notifSub) els.notifSub.hidden = true;
     alert("לא ניתנה הרשאה להתראות.\nכדי להפעיל — אשרי הרשאות התראות לאתר זה בהגדרות הדפדפן.");
   }
+});
+
+// הגדרות פירוט התראות
+els.notif1Name?.addEventListener("change", (e) => {
+  state.settings.notif1Name = e.target.value.trim();
+  saveSettings(state.settings);
+});
+els.notif1Min?.addEventListener("change", (e) => {
+  state.settings.reminderStartMin = Math.max(0, parseInt(e.target.value) || 0);
+  saveSettings(state.settings);
+});
+els.notif2Name?.addEventListener("change", (e) => {
+  state.settings.notif2Name = e.target.value.trim();
+  saveSettings(state.settings);
+});
+els.notif2Min?.addEventListener("change", (e) => {
+  state.settings.reminderEndMin = Math.max(0, parseInt(e.target.value) || 30);
+  saveSettings(state.settings);
+});
+els.notifFixedTime?.addEventListener("change", (e) => {
+  state.settings.reminderFixedTime = e.target.value;
+  saveSettings(state.settings);
 });
 
 // בחירת ערכת נושא
@@ -1051,15 +1187,28 @@ if (savedView?.hYear && savedView?.hMonth) {
 if (els.ozToggle             && state.settings.ozEnabled)            els.ozToggle.setAttribute("aria-checked",            "true");
 if (els.day31Toggle          && state.settings.day31Enabled)         els.day31Toggle.setAttribute("aria-checked",         "true");
 if (els.fullDayToggle        && state.settings.fullDayEnabled)       els.fullDayToggle.setAttribute("aria-checked",       "true");
+
+// הצגת/הסתרת שורת טווח אור זרוע וערך נבחר
+if (els.ozScopeRow)   els.ozScopeRow.hidden = !state.settings.ozEnabled;
+if (els.ozTypeSelect) els.ozTypeSelect.value = state.settings.ozType || "all";
+
 // התראות — מציגים כדלוק רק אם גם ההגדרה וגם ההרשאה קיימות
-if (els.notificationsToggle  && state.settings.notificationsEnabled
-    && "Notification" in window && Notification.permission === "granted") {
+const _notifActive = state.settings.notificationsEnabled
+    && "Notification" in window && Notification.permission === "granted";
+if (els.notificationsToggle && _notifActive) {
   els.notificationsToggle.setAttribute("aria-checked", "true");
 } else if (state.settings.notificationsEnabled) {
   // ההגדרה דלוקה אך ההרשאה בוטלה בדפדפן — מכבים אוטומטית
   state.settings.notificationsEnabled = false;
   saveSettings(state.settings);
 }
+// הצגת/הסתרת הגדרות פירוט התראות + מילוי ערכים שמורים
+if (els.notifSub)       els.notifSub.hidden       = !_notifActive;
+if (els.notif1Name)     els.notif1Name.value      = state.settings.notif1Name    || "";
+if (els.notif1Min)      els.notif1Min.value       = state.settings.reminderStartMin ?? 0;
+if (els.notif2Name)     els.notif2Name.value      = state.settings.notif2Name    || "";
+if (els.notif2Min)      els.notif2Min.value       = state.settings.reminderEndMin ?? 30;
+if (els.notifFixedTime) els.notifFixedTime.value  = state.settings.reminderFixedTime || "";
 
 // החל ערכת נושא שמורה
 applyTheme(state.settings.theme || "light");

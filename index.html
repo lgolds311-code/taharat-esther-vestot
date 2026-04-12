@@ -113,15 +113,29 @@
         </div>
         <div class="modal__body">
 
+          <!-- ══ חישובים ══ -->
+          <div class="setting-section-header">חישובים</div>
+
           <!-- אור זרוע -->
           <div class="setting-row">
             <div class="setting-label">
               <div class="setting-name">אור זרוע</div>
-              <div class="setting-desc">סמני עונת אור זרוע (לילה/יום שלפני כל פרישה)</div>
+              <div class="setting-desc">סמני עונת אור זרוע (יום/לילה שלפני הפרישה)</div>
             </div>
             <button id="oz-toggle" class="toggle-btn" role="switch" aria-checked="false" type="button" aria-label="הפעל אור זרוע">
               <span class="toggle-btn__knob"></span>
             </button>
+          </div>
+          <!-- תת-שורת אור זרוע: על אילו וסתות -->
+          <div id="oz-scope-row" class="setting-row setting-row--sub" hidden>
+            <div class="setting-label">
+              <div class="setting-name">על אילו וסתות</div>
+              <div class="setting-desc">האם לסמן אור זרוע לכל הוסתות או לעונה בינונית בלבד</div>
+            </div>
+            <select id="oz-type-select" class="select select--small" aria-label="טווח אור זרוע">
+              <option value="all">על כל העונות</option>
+              <option value="beinonit">רק על עונה בינונית</option>
+            </select>
           </div>
 
           <!-- חומרת יום לא -->
@@ -146,7 +160,9 @@
             </button>
           </div>
 
-          <!-- ערכת נושא -->
+          <!-- ══ עיצוב ══ -->
+          <div class="setting-section-header">עיצוב</div>
+
           <div class="setting-row">
             <div class="setting-label">
               <div class="setting-name">עיצוב רקע</div>
@@ -159,18 +175,69 @@
             </select>
           </div>
 
-          <!-- התראות קופצות -->
+          <!-- ══ התראות ══ -->
+          <div class="setting-section-header">התראות</div>
+
+          <!-- הפעלת התראות -->
           <div class="setting-row">
             <div class="setting-label">
-              <div class="setting-name">התראות קופצות</div>
-              <div class="setting-desc">תזכורת ביום שיש עונת פרישה</div>
+              <div class="setting-name">הפעלת התראות</div>
+              <div class="setting-desc">2 תזכורות לכל עונת פרישה (תחילה + בדיקה)</div>
             </div>
             <button id="notifications-toggle" class="toggle-btn" role="switch" aria-checked="false" type="button" aria-label="הפעל התראות">
               <span class="toggle-btn__knob"></span>
             </button>
           </div>
 
-          <!-- שיתוף QR -->
+          <!-- הגדרות פירוט (מוצגות רק כשהתראות מופעלות) -->
+          <div id="notif-sub" hidden>
+
+            <div class="setting-row setting-row--sub">
+              <div class="setting-label">
+                <div class="setting-name">שם תזכורת פתיחת עונה</div>
+                <div class="setting-desc">מוצגת בתחילת העונה (זריחה/שקיעה)</div>
+              </div>
+              <input id="notif1-name" class="input--text" type="text" maxlength="40" placeholder="תחילת עונת פרישה">
+            </div>
+
+            <div class="setting-row setting-row--sub">
+              <div class="setting-label">
+                <div class="setting-name">דקות לפני תחילת העונה</div>
+                <div class="setting-desc">0 = בדיוק בזמן הזריחה/שקיעה</div>
+              </div>
+              <input id="notif1-min" class="input--number" type="number" min="0" max="120" placeholder="0">
+            </div>
+
+            <div class="setting-row setting-row--sub">
+              <div class="setting-label">
+                <div class="setting-name">שם תזכורת הבדיקה</div>
+                <div class="setting-desc">מוצגת לפני סוף העונה</div>
+              </div>
+              <input id="notif2-name" class="input--text" type="text" maxlength="40" placeholder="זמן לבדיקה">
+            </div>
+
+            <div class="setting-row setting-row--sub">
+              <div class="setting-label">
+                <div class="setting-name">דקות לפני סוף העונה</div>
+                <div class="setting-desc">ברירת מחדל: 30 דקות (לפני שקיעה/זריחה)</div>
+              </div>
+              <input id="notif2-min" class="input--number" type="number" min="5" max="120" placeholder="30">
+            </div>
+
+            <div class="setting-row setting-row--sub">
+              <div class="setting-label">
+                <div class="setting-name">שעה קבועה לתזכורת</div>
+                <div class="setting-desc">השאר ריק לחישוב לפי שמש. אם מוגדר — ישלח בשעה זו</div>
+              </div>
+              <input id="notif-fixed-time" class="input--text" type="time">
+            </div>
+
+          </div>
+
+          <!-- ══ שיתוף ══ -->
+          <div class="setting-section-header">שיתוף</div>
+
+          <!-- QR -->
           <div class="setting-row setting-row--qr">
             <div class="setting-label">
               <div class="setting-name">שיתוף האפליקציה</div>
