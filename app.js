@@ -822,6 +822,23 @@ function computeMarks() {
     sum += `\nוסת ההפלגה: הוסיפי גם רשומה קודמת כדי לחשב.`;
   }
 
+  // ── הפסק טהרה ──
+  for (const [iso, rec] of Object.entries(state.entries || {})) {
+    if (!rec) continue;
+    if      (rec.hefsek === "ok")   mark(iso, "הפסק טהרה ✦");
+    else if (rec.hefsek === "fail") mark(iso, "הפסק נכשל ✗");
+  }
+
+  // ── שבעה נקיים ──
+  const nekiimRange = getShivaNekiimRange();
+  if (nekiimRange) {
+    for (let i = 1; i <= 7; i++) {
+      const d = new Date(nekiimRange.start.getFullYear(), nekiimRange.start.getMonth(), nekiimRange.start.getDate() + (i - 1));
+      mark(isoKey(d), `שבעה נקיים - יום ${i}`);
+      if (i === 7) mark(isoKey(d), "ערב טבילה 💧");
+    }
+  }
+
   return { marks, summary: sum };
 }
 
@@ -969,13 +986,83 @@ function buildCell({ date, muted, today, marks }) {
     const title    = hebFullGem(date);
     const anchor   = cell.getBoundingClientRect();
 
+    // ── מקטע הפסק טהרה / ז׳ נקיים ──
+    const nekiimDay = isShivaNekiimDay(key);
+    let extraHTML = "";
+
+    if (nekiimDay) {
+      // יום בתוך שבעה נקיים — כפתורי בדיקת בוקר/ערב
+      const rec   = state.entries[key] || {};
+      const mOk   = rec.checkMorning === "ok"   ? " popover__check-btn--active" : "";
+      const mFail = rec.checkMorning === "fail"  ? " popover__check-btn--active" : "";
+      const eOk   = rec.checkEvening === "ok"    ? " popover__check-btn--active" : "";
+      const eFail = rec.checkEvening === "fail"  ? " popover__check-btn--active" : "";
+      extraHTML = `<div class="popover__hefsek-section"><div class="popover__hefsek-title">יום ${nekiimDay} בשבעה נקיים</div><div class="popover__check-row"><span class="popover__check-label">בדיקת בוקר</span><button type="button" class="popover__check-btn popover__check-btn--ok${mOk}" data-check="morning" data-val="ok">✓</button><button type="button" class="popover__check-btn popover__check-btn--fail${mFail}" data-check="morning" data-val="fail">✗</button></div><div class="popover__check-row"><span class="popover__check-label">בדיקת ערב</span><button type="button" class="popover__check-btn popover__check-btn--ok${eOk}" data-check="evening" data-val="ok">✓</button><button type="button" class="popover__check-btn popover__check-btn--fail${eFail}" data-check="evening" data-val="fail">✗</button></div></div>`;
+    } else {
+      // בדיקת זכאות להפסק טהרה
+      const vestList = getSortedEntries();
+      const lastVest = vestList[0];
+      if (lastVest) {
+        const eligibleDate = getHefsekEligibleDate(lastVest.iso);
+        const vestDate     = parseIsoKey(lastVest.iso);
+        if (eligibleDate && date >= eligibleDate) {
+          const hasValidHefsek = Object.entries(state.entries || {}).some(([iso, rec]) => {
+            if (rec?.hefsek !== "ok") return false;
+            const d = parseIsoKey(iso);
+            return d && vestDate && d > vestDate;
+          });
+          if (!hasValidHefsek) {
+            const rec   = state.entries[key] || {};
+            const hOk   = rec.hefsek === "ok"   ? " popover__check-btn--active" : "";
+            const hFail = rec.hefsek === "fail"  ? " popover__check-btn--active" : "";
+            extraHTML = `<div class="popover__hefsek-section"><div class="popover__check-row"><span class="popover__check-label">הפסק טהרה</span><button type="button" class="popover__check-btn popover__check-btn--ok${hOk}" data-hefsek="ok">✓ תקין</button><button type="button" class="popover__check-btn popover__check-btn--fail${hFail}" data-hefsek="fail">✗ ראיתי דם</button></div></div>`;
+          }
+        }
+      }
+    }
+
+    // פונקציית חיבור אירועים לכפתורי הפסק/בדיקות
+    const bindHefsekEvents = () => {
+      els.popoverBody.querySelectorAll("[data-check]").forEach(btn => {
+        btn.addEventListener("click", () => {
+          const field = btn.dataset.check === "morning" ? "checkMorning" : "checkEvening";
+          const val   = btn.dataset.val;
+          if (!state.entries[key]) state.entries[key] = { updatedAt: Date.now() };
+          // toggle: לחיצה חוזרת מבטלת
+          if (state.entries[key][field] === val) {
+            delete state.entries[key][field];
+          } else {
+            state.entries[key][field] = val;
+          }
+          state.entries[key].updatedAt = Date.now();
+          saveJson(STORAGE.entries, state.entries);
+          // עדכון ויזואלי ללא סגירת הפופ-אפ
+          const row = btn.closest(".popover__check-row");
+          row.querySelectorAll(".popover__check-btn").forEach(b => b.classList.remove("popover__check-btn--active"));
+          if (state.entries[key][field]) btn.classList.add("popover__check-btn--active");
+          renderMonth();
+        });
+      });
+      els.popoverBody.querySelectorAll("[data-hefsek]").forEach(btn => {
+        btn.addEventListener("click", () => {
+          const val = btn.dataset.hefsek;
+          if (!state.entries[key]) state.entries[key] = { updatedAt: Date.now() };
+          state.entries[key].hefsek    = val;
+          state.entries[key].updatedAt = Date.now();
+          saveJson(STORAGE.entries, state.entries);
+          closePopover();
+          renderMonth();
+        });
+      });
+    };
+
     if (existing) {
       // ── עריכה / מחיקה ──
       const existingFeelings = state.entries[key]?.feelings || "";
       const escapedFeelings  = existingFeelings.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
       openPopover({
         title,
-        bodyHTML: `<div class="popover__info">מסומן כ־${existing === "night" ? "לילה" : "יום"}.</div><label class="popover__feelings-label">הרגשות גוף<textarea class="popover__feelings-input" placeholder="למשל: כאב ראש, עייפות, כאבי בטן...">${escapedFeelings}</textarea></label>`,
+        bodyHTML: `<div class="popover__info">מסומן כ־${existing === "night" ? "לילה" : "יום"}.</div><label class="popover__feelings-label">הרגשות גוף<textarea class="popover__feelings-input" placeholder="למשל: כאב ראש, עייפות, כאבי בטן...">${escapedFeelings}</textarea></label>${extraHTML}`,
         actions: [
           {
             label: "שמור", className: "btn btn--primary",
@@ -1003,6 +1090,7 @@ function buildCell({ date, muted, today, marks }) {
         ],
         anchorRect: anchor,
       });
+      bindHefsekEvents();
     } else {
       // ── רישום חדש + זמני שמש ──
       const loc   = loadLocation();
@@ -1020,8 +1108,8 @@ function buildCell({ date, muted, today, marks }) {
       const nightClass = isDay ? "btn"               : "btn btn--primary";
 
       // הרגשות מהוסת הקודמת (לכפתור העתקה)
-      const allSorted   = getSortedEntries();
-      const prevEntry   = allSorted[0];
+      const allSorted    = getSortedEntries();
+      const prevEntry    = allSorted[0];
       const prevFeelings = prevEntry ? (state.entries[prevEntry.iso]?.feelings || "") : "";
       const copyBtnHtml  = prevFeelings
         ? `<button type="button" class="btn btn--ghost btn--small popover__copy-prev">העתק הרגשות מהוסת הקודמת</button>`
@@ -1029,7 +1117,7 @@ function buildCell({ date, muted, today, marks }) {
 
       openPopover({
         title,
-        bodyHTML: `<div class="popover__times">☀️ זריחה: ${srStr}&nbsp;&nbsp;&nbsp;🌇 שקיעה: ${ssStr}</div><label class="popover__feelings-label">הרגשות גוף (אופציונלי)<textarea class="popover__feelings-input" placeholder="למשל: כאב ראש, עייפות, כאבי בטן..."></textarea></label>${copyBtnHtml}<div class="popover__question">איך לסמן?</div>`,
+        bodyHTML: `<div class="popover__times">☀️ זריחה: ${srStr}&nbsp;&nbsp;&nbsp;🌇 שקיעה: ${ssStr}</div><label class="popover__feelings-label">הרגשות גוף (אופציונלי)<textarea class="popover__feelings-input" placeholder="למשל: כאב ראש, עייפות, כאבי בטן..."></textarea></label>${copyBtnHtml}<div class="popover__question">איך לסמן?</div>${extraHTML}`,
         actions: [
           {
             label: "יום ☀️", className: dayClass,
@@ -1066,6 +1154,7 @@ function buildCell({ date, muted, today, marks }) {
           });
         }
       }
+      bindHefsekEvents();
     }
   });
 

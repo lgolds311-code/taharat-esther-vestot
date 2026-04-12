@@ -588,6 +588,85 @@ body {
   justify-content: flex-start;
 }
 
+/* ── כפתורי הפסק טהרה / שבעה נקיים בפופ-אפ ── */
+.popover__hefsek-section {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(147, 51, 234, 0.18);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.popover__hefsek-title {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--brand);
+  margin-bottom: 2px;
+}
+
+.popover__check-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.popover__check-label {
+  font-size: 0.8rem;
+  flex: 1;
+  color: var(--text);
+  opacity: 0.85;
+}
+
+.popover__check-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  padding: 3px 10px;
+  border-radius: 6px;
+  border: 1px solid rgba(147, 51, 234, 0.3);
+  background: rgba(147, 51, 234, 0.07);
+  color: var(--text);
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+  line-height: 1.4;
+}
+
+.popover__check-btn--ok {
+  border-color: rgba(34, 197, 94, 0.45);
+  color: #16a34a;
+}
+
+.popover__check-btn--ok:hover {
+  background: rgba(34, 197, 94, 0.15);
+  border-color: rgba(34, 197, 94, 0.7);
+}
+
+.popover__check-btn--ok.popover__check-btn--active {
+  background: rgba(34, 197, 94, 0.22);
+  border-color: rgba(34, 197, 94, 0.75);
+  color: #15803d;
+}
+
+.popover__check-btn--fail {
+  border-color: rgba(244, 63, 94, 0.4);
+  color: #e11d48;
+}
+
+.popover__check-btn--fail:hover {
+  background: rgba(244, 63, 94, 0.13);
+  border-color: rgba(244, 63, 94, 0.65);
+}
+
+.popover__check-btn--fail.popover__check-btn--active {
+  background: rgba(244, 63, 94, 0.2);
+  border-color: rgba(244, 63, 94, 0.7);
+  color: #be123c;
+}
+
 .btn--danger {
   background: linear-gradient(135deg, rgba(244, 63, 94, 0.88), rgba(239, 68, 68, 0.6));
   border-color: rgba(244, 63, 94, 0.6);
