@@ -746,8 +746,15 @@ body {
 }
 
 .setting-row--disabled {
-  opacity: 0.48;
+  opacity: 0.42;
   cursor: default;
+  pointer-events: none;
+}
+
+/* ── קבוצת הגדרות עמומה (ההורה מכובה) ── */
+.settings-group--dimmed {
+  opacity: 0.42;
+  pointer-events: none;
 }
 
 /* ── כותרות קטגוריות ── */

@@ -1156,7 +1156,7 @@ els.ozToggle?.addEventListener("click", () => {
   els.ozToggle.setAttribute("aria-checked", String(newVal));
   state.settings.ozEnabled = newVal;
   saveSettings(state.settings);
-  if (els.ozScopeRow) els.ozScopeRow.hidden = !newVal;
+  if (els.ozScopeRow) els.ozScopeRow.classList.toggle("setting-row--disabled", !newVal);
   renderMonth();
 });
 
@@ -1194,7 +1194,7 @@ els.notificationsToggle?.addEventListener("click", async () => {
     els.notificationsToggle.setAttribute("aria-checked", "false");
     state.settings.notificationsEnabled = false;
     saveSettings(state.settings);
-    if (els.notifSub) els.notifSub.hidden = true;
+    if (els.notifSub) els.notifSub.classList.add("settings-group--dimmed");
     return;
   }
 
@@ -1209,7 +1209,7 @@ els.notificationsToggle?.addEventListener("click", async () => {
     els.notificationsToggle.setAttribute("aria-checked", "true");
     state.settings.notificationsEnabled = true;
     saveSettings(state.settings);
-    if (els.notifSub) els.notifSub.hidden = false;
+    if (els.notifSub) els.notifSub.classList.remove("settings-group--dimmed");
     return;
   }
 
@@ -1226,12 +1226,12 @@ els.notificationsToggle?.addEventListener("click", async () => {
     els.notificationsToggle.setAttribute("aria-checked", "true");
     state.settings.notificationsEnabled = true;
     saveSettings(state.settings);
-    if (els.notifSub) els.notifSub.hidden = false;
+    if (els.notifSub) els.notifSub.classList.remove("settings-group--dimmed");
   } else {
     els.notificationsToggle.setAttribute("aria-checked", "false");
     state.settings.notificationsEnabled = false;
     saveSettings(state.settings);
-    if (els.notifSub) els.notifSub.hidden = true;
+    if (els.notifSub) els.notifSub.classList.add("settings-group--dimmed");
     alert("לא ניתנה הרשאה להתראות.\nכדי להפעיל — אשרי הרשאות התראות לאתר זה בהגדרות הדפדפן.");
   }
 });
@@ -1430,8 +1430,8 @@ if (els.ozToggle             && state.settings.ozEnabled)            els.ozToggl
 if (els.day31Toggle          && state.settings.day31Enabled)         els.day31Toggle.setAttribute("aria-checked",         "true");
 if (els.fullDayToggle        && state.settings.fullDayEnabled)       els.fullDayToggle.setAttribute("aria-checked",       "true");
 
-// הצגת/הסתרת שורת טווח אור זרוע וערך נבחר
-if (els.ozScopeRow)   els.ozScopeRow.hidden = !state.settings.ozEnabled;
+// עמימת/הפעלת שורת טווח אור זרוע לפי מצב הטוגל
+if (els.ozScopeRow)   els.ozScopeRow.classList.toggle("setting-row--disabled", !state.settings.ozEnabled);
 if (els.ozTypeSelect) els.ozTypeSelect.value = state.settings.ozType || "all";
 
 // התראות — מציגים כדלוק רק אם גם ההגדרה וגם ההרשאה קיימות
@@ -1444,8 +1444,8 @@ if (els.notificationsToggle && _notifActive) {
   state.settings.notificationsEnabled = false;
   saveSettings(state.settings);
 }
-// הצגת/הסתרת הגדרות פירוט התראות + מילוי ערכים שמורים
-if (els.notifSub)       els.notifSub.hidden       = !_notifActive;
+// עמימת/הפעלת קבוצת הגדרות התראות
+if (els.notifSub) els.notifSub.classList.toggle("settings-group--dimmed", !_notifActive);
 if (els.notif1Name)     els.notif1Name.value      = state.settings.notif1Name    || "";
 if (els.notif1Min)      els.notif1Min.value       = state.settings.reminderStartMin ?? 0;
 if (els.notif2Name)     els.notif2Name.value      = state.settings.notif2Name    || "";
