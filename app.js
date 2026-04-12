@@ -457,21 +457,11 @@ function checkDailyNotifications() {
     localStorage.setItem(STORAGE.lastNotification, JSON.stringify(sentLog));
   };
 
-  const { marks } = computeMarks();
-  const todayMarks = marks[todayKey];
-  if (!todayMarks || !todayMarks.length) return;
-
   const loc = loadLocation();
   const sun = getSunTimes(now, loc.lat, loc.lng);
   if (!sun) return;
 
-  const startMin   = state.settings.reminderStartMin ?? 0;
-  const endMin     = state.settings.reminderEndMin   ?? 30;
-  const fixedTime1 = state.settings.notif1FixedTime || state.settings.reminderFixedTime || "";
-  const fixedTime2 = state.settings.notif2FixedTime || "";
-  const label1     = state.settings.notif1Name || "תחילת עונת פרישה";
-  const label2     = state.settings.notif2Name || "זמן לבדיקה";
-  const marksStr  = todayMarks.join(", ");
+  const { sunrise, sunset } = sun;
 
   /** שליחת התראה אחת (אם לא נשלחה עדיין) */
   const send = (id, title, body) => {
@@ -500,42 +490,119 @@ function checkDailyNotifications() {
     }
   };
 
-  const { sunrise, sunset } = sun;
+  // ── תזכורות וסת (רק אם יש marks להיום) ──
+  const { marks } = computeMarks();
+  const todayMarks = marks[todayKey];
+  if (todayMarks?.length) {
+    const startMin   = state.settings.reminderStartMin ?? 0;
+    const endMin     = state.settings.reminderEndMin   ?? 30;
+    const fixedTime1 = state.settings.notif1FixedTime || state.settings.reminderFixedTime || "";
+    const fixedTime2 = state.settings.notif2FixedTime || "";
+    const label1     = state.settings.notif1Name || "תחילת עונת פרישה";
+    const label2     = state.settings.notif2Name || "זמן לבדיקה";
+    const marksStr   = todayMarks.join(", ");
 
-  // ── תזכורת ראשונה: פתיחת עונה ──
-  if (fixedTime1) {
-    const [hh, mm] = fixedTime1.split(":").map(Number);
-    const t = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hh, mm);
-    scheduleAt(t, `fixed1-${fixedTime1}`, label1, marksStr);
-  } else {
-    scheduleAt(
-      new Date(sunrise.getTime() - startMin * 60_000),
-      "sr-start", label1,
-      `זריחה בשעה ${formatILTime(sunrise)} — ${marksStr}`
-    );
-    scheduleAt(
-      new Date(sunset.getTime() - startMin * 60_000),
-      "ss-start", label1,
-      `שקיעה בשעה ${formatILTime(sunset)} — ${marksStr}`
-    );
+    // ── תזכורת ראשונה: פתיחת עונה ──
+    if (fixedTime1) {
+      const [hh, mm] = fixedTime1.split(":").map(Number);
+      const t = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hh, mm);
+      scheduleAt(t, `fixed1-${fixedTime1}`, label1, marksStr);
+    } else {
+      scheduleAt(
+        new Date(sunrise.getTime() - startMin * 60_000),
+        "sr-start", label1,
+        `זריחה בשעה ${formatILTime(sunrise)} — ${marksStr}`
+      );
+      scheduleAt(
+        new Date(sunset.getTime() - startMin * 60_000),
+        "ss-start", label1,
+        `שקיעה בשעה ${formatILTime(sunset)} — ${marksStr}`
+      );
+    }
+
+    // ── תזכורת שנייה: זמן לבדיקה ──
+    if (fixedTime2) {
+      const [hh, mm] = fixedTime2.split(":").map(Number);
+      const t = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hh, mm);
+      scheduleAt(t, `fixed2-${fixedTime2}`, label2, marksStr);
+    } else {
+      scheduleAt(
+        new Date(sunrise.getTime() - endMin * 60_000),
+        "sr-end", label2,
+        `עוד ${endMin} דק׳ עד הזריחה — ${marksStr}`
+      );
+      scheduleAt(
+        new Date(sunset.getTime() - endMin * 60_000),
+        "ss-end", label2,
+        `עוד ${endMin} דק׳ עד השקיעה — ${marksStr}`
+      );
+    }
   }
 
-  // ── תזכורת שנייה: זמן לבדיקה ──
-  if (fixedTime2) {
-    const [hh, mm] = fixedTime2.split(":").map(Number);
-    const t = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hh, mm);
-    scheduleAt(t, `fixed2-${fixedTime2}`, label2, marksStr);
-  } else {
+  // ── תזכורת הפסק טהרה ──
+  const vestList = getSortedEntries();
+  const lastVest = vestList[0];
+  if (lastVest) {
+    const eligibleDate = getHefsekEligibleDate(lastVest.iso);
+    const vestDate     = parseIsoKey(lastVest.iso);
+    if (eligibleDate && now >= eligibleDate) {
+      const hasValidHefsek = Object.entries(state.entries || {}).some(([iso, rec]) => {
+        if (rec?.hefsek !== "ok") return false;
+        const d = parseIsoKey(iso);
+        return d && vestDate && d > vestDate;
+      });
+      if (!hasValidHefsek) {
+        const reminderMin = state.settings.hefsekReminderMin ?? 30;
+        scheduleAt(
+          new Date(sunset.getTime() - reminderMin * 60_000),
+          `hefsek-reminder-${todayKey}`,
+          "הפסק טהרה",
+          "הגיע הזמן לעשות הפסק טהרה לפני השקיעה"
+        );
+      }
+    }
+  }
+
+  // ── תזכורות שבעה נקיים ──
+  const nekiimDay = isShivaNekiimDay(todayKey);
+  if (nekiimDay) {
+    // בדיקת בוקר
+    const morningTime = state.settings.hefsekMorningTime || "07:00";
+    const [mhh, mmm] = morningTime.split(":").map(Number);
+    const morningT = new Date(now.getFullYear(), now.getMonth(), now.getDate(), mhh, mmm);
     scheduleAt(
-      new Date(sunrise.getTime() - endMin * 60_000),
-      "sr-end", label2,
-      `עוד ${endMin} דק׳ עד הזריחה — ${marksStr}`
+      morningT,
+      `nekiim-morning-${todayKey}`,
+      `בדיקת בוקר (יום ${nekiimDay})`,
+      "בוקר טוב, לא לשכוח בדיקת בוקר של שבעה נקיים"
     );
+
+    // בדיקת ערב
+    const eveningMin = state.settings.hefsekEveningMin ?? 30;
     scheduleAt(
-      new Date(sunset.getTime() - endMin * 60_000),
-      "ss-end", label2,
-      `עוד ${endMin} דק׳ עד השקיעה — ${marksStr}`
+      new Date(sunset.getTime() - eveningMin * 60_000),
+      `nekiim-evening-${todayKey}`,
+      `בדיקת ערב (יום ${nekiimDay})`,
+      "לא לשכוח בדיקת ערב לפני השקיעה"
     );
+
+    // ── תזכורת טבילה — רק ביום 7 ──
+    if (nekiimDay === 7 && state.settings.hefsekMikvehReminder !== false) {
+      const mikvehTime = state.settings.hefsekMikvehTime || "";
+      let mikvehT;
+      if (mikvehTime) {
+        const [hh, mm] = mikvehTime.split(":").map(Number);
+        mikvehT = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hh, mm);
+      } else {
+        mikvehT = new Date(sunset);
+      }
+      scheduleAt(
+        mikvehT,
+        `mikveh-${todayKey}`,
+        "ערב טבילה",
+        "היום בערב טבילה. הכנות נעימות!"
+      );
+    }
   }
 }
 
