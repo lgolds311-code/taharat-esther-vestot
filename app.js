@@ -1258,7 +1258,7 @@ function computeMarks() {
           break;
         case "dilug_haflagah":
           nextGreg = p.nextHd.greg();
-          lbl = `דילוג הפלגה (${p.interval + p.step - 1}→${p.interval + p.step} ימים)`;
+          lbl = `דילוג הפלגה (${p.interval}→${p.interval + p.step} ימים)`;
           break;
         case "weekly":
           nextGreg = p.nextHd.greg();
@@ -1710,7 +1710,7 @@ function exportIcs() {
   const events  = [];
   for (const [iso, labels] of Object.entries(marks)) {
     const dt = parseIsoKey(iso); if (!dt) continue;
-    for (const label of labels) {
+    for (const { label } of labels) {
       events.push([
         "BEGIN:VEVENT",
         `UID:${iso}-${label}-${Math.random().toString(16).slice(2)}@monthlycalendar.local`,
@@ -1772,6 +1772,8 @@ els.importBackupFile?.addEventListener("change", (e) => {
       if (!data || typeof data !== "object") throw new Error("פורמט לא תקין");
       if (data.entries)  { state.entries  = data.entries;  saveJson(STORAGE.entries, state.entries); }
       if (data.settings) { state.settings = { ...loadSettings(), ...data.settings }; saveSettings(state.settings); }
+      applyTheme(state.settings.theme || "light");
+      if (els.themeSelect) els.themeSelect.value = state.settings.theme || "light";
       renderMonth();
       alert("הנתונים שוחזרו בהצלחה.");
     } catch {
@@ -1796,6 +1798,7 @@ els.clearAll.addEventListener("click", clearAll);
 
 window.addEventListener("keydown", (e) => {
   // RTL: ימין (→) = חודש קודם, שמאל (←) = חודש הבא
+  if (!els.popover.hidden) return; // אל תנווט כשפופאפ פתוח
   if (e.key === "ArrowRight") {
     const p = addHebMonths(state.viewHYear, state.viewHMonth, -1);
     state.viewHYear = p.year; state.viewHMonth = p.month; renderMonth();
