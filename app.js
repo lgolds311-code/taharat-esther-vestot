@@ -26,7 +26,8 @@ const els = {
   ozToggle:       document.querySelector("#oz-toggle"),
   day31Toggle:    document.querySelector("#day31-toggle"),
   fullDayToggle:  document.querySelector("#full-day-toggle"),
-  themeSelect:          document.querySelector("#theme-select"),
+  themeSelect:             document.querySelector("#theme-select"),
+  fixedHaflagahSelect:     document.querySelector("#fixed-haflagah-select"),
   notificationsToggle:  document.querySelector("#notifications-toggle"),
   ozScopeRow:           document.querySelector("#oz-scope-row"),
   ozTypeSelect:         document.querySelector("#oz-type-select"),
@@ -346,6 +347,7 @@ function saveJson(key, value) {
 const DEFAULT_SETTINGS = {
   ozEnabled: false, ozType: "all",
   day31Enabled: false, fullDayEnabled: false,
+  fixedHaflagahMethod: "beit_yosef",  // ב״י | rashal | taz
   theme: "light",
   notificationsEnabled: false,
   notif1Name: "", notif2Name: "",
@@ -799,124 +801,497 @@ function prevDay(greg) {
   return new Date(greg.getFullYear(), greg.getMonth(), greg.getDate() - 1);
 }
 
-function computeMarks() {
-  if (!HDateCtor) return { marks: {}, summary: "כדי לראות חישובים יש לאפשר טעינת הספרייה (CDN)." };
-  const [current, previous] = getSortedEntries();
-  if (!current) return { marks: {}, summary: "לחצי על תאריך כדי לרשום יום/לילה." };
+/**
+ * מחזיר כמה חודשים עבריים יש בין שני HDate (שניהם מאותו יום בחודש).
+ * hdOlder < hdNewer. מקסימום 24 חודשים.
+ */
+function hebMonthsApart(hdOlder, hdNewer) {
+  let k = 0;
+  let cur = { year: hdOlder.getFullYear(), month: hdOlder.getMonth() };
+  const tgtY = hdNewer.getFullYear(), tgtM = hdNewer.getMonth();
+  while (k <= 24) {
+    if (cur.year === tgtY && cur.month === tgtM) return k;
+    cur = addHebMonths(cur.year, cur.month, 1);
+    k++;
+  }
+  return -1; // לא נמצא בטווח
+}
 
-  const oz       = state.settings?.ozEnabled;
-  const ozType   = state.settings?.ozType || "all";
-  const day31    = state.settings?.day31Enabled;
-  const fullDay  = state.settings?.fullDayEnabled;
+/**
+ * בודק אם 3 הרשומות האחרונות קובעות וסת קבוע.
+ * תנאים: 3 ראיות רצופות באותה עונה (יום/לילה), ואותו יום עברי לחודש / אותו הפרש.
+ * @param {Array} entries — מיון מחדש לישן (כל הרשומות)
+ * @returns {{ type:"month", hDay:number, tod:string }
+ *          |{ type:"haflagah", interval:number, tod:string }
+ *          |null}
+ */
+function detectFixedVeset(entries) {
+  if (!HDateCtor || entries.length < 3) return null;
+  const [e0, e1, e2] = entries; // e0 = חדשה ביותר
 
-  const currHd  = new HDateCtor(current.date);
+  // כל 3 חייבות להיות באותה עונה
+  if (e0.tod !== e1.tod || e1.tod !== e2.tod) return null;
 
-  const rule1 = currHd.add(29, "d");   // עונה בינונית (יום 30)
+  try {
+    const hd0 = new HDateCtor(e0.date);
+    const hd1 = new HDateCtor(e1.date);
+    const hd2 = new HDateCtor(e2.date);
 
-  // וסת החודש — אותו יום עברי בחודש הבא, בניה מפורשת
-  // מקרה קצה: אם החודש הבא חסר ואין בו את היום הדרוש → א' של החודש שאחריו
-  const nextMonth  = addHebMonths(currHd.getFullYear(), currHd.getMonth(), 1);
-  const daysInNext = getHebDaysInMonth(nextMonth.year, nextMonth.month);
-  let rule2;
-  if (currHd.getDate() > daysInNext) {
-    const skipMonth = addHebMonths(nextMonth.year, nextMonth.month, 1);
-    rule2 = new HDateCtor(1, skipMonth.month, skipMonth.year);
-  } else {
-    rule2 = new HDateCtor(currHd.getDate(), nextMonth.month, nextMonth.year);
+    // וסת חודש קבוע: אותו יום עברי בחודשים עוקבים (הפרש חודש אחד בין כל שתיים)
+    if (hd0.getDate() === hd1.getDate() && hd1.getDate() === hd2.getDate()) {
+      const m21 = hebMonthsApart(hd2, hd1);
+      const m10 = hebMonthsApart(hd1, hd0);
+      if (m21 === 1 && m10 === 1) {
+        return { type: "month", hDay: hd0.getDate(), tod: e0.tod };
+      }
+    }
+
+    // וסת הפלגה קבוע: אותו הפרש בין כל שתי ראיות עוקבות
+    const int01 = hd0.abs() - hd1.abs(); // חיובי: e0 מאוחרת מ-e1
+    const int12 = hd1.abs() - hd2.abs();
+    if (int01 > 0 && int01 === int12) {
+      return { type: "haflagah", interval: int01 + 1, tod: e0.tod };
+    }
+  } catch {}
+
+  return null;
+}
+
+/**
+ * מזהה דפוסי וסת פחות-מצויים: דילוג (חודש/הפלגה), ימי שבוע, סירוג.
+ * מחזיר מערך של דפוסים שנמצאו — כל אחד הוא חשש נוסף (לא מבטל את הרגילים).
+ * @param {Array} entries — מיון מחדש לישן
+ * @returns {Array<{ type, ... }>}
+ */
+function detectRareVesetPatterns(entries) {
+  if (!HDateCtor || entries.length < 3) return [];
+  const [e0, e1, e2] = entries;
+
+  // כל הדפוסים: אותה עונה
+  if (e0.tod !== e1.tod || e1.tod !== e2.tod) return [];
+
+  const results = [];
+
+  try {
+    const hd0 = new HDateCtor(e0.date);
+    const hd1 = new HDateCtor(e1.date);
+    const hd2 = new HDateCtor(e2.date);
+
+    const int01 = hd0.abs() - hd1.abs(); // הפרש גולמי (חיובי)
+    const int12 = hd1.abs() - hd2.abs();
+
+    const m10 = hebMonthsApart(hd1, hd0); // חודשים בין hd1 ל-hd0
+    const m21 = hebMonthsApart(hd2, hd1); // חודשים בין hd2 ל-hd1
+
+    const d0 = hd0.getDate(), d1 = hd1.getDate(), d2 = hd2.getDate();
+
+    // ── 1. וסת החודש בדילוג ──
+    // חודשים עוקבים + הפרש יום קבוע ושונה מאפס
+    if (m10 === 1 && m21 === 1) {
+      const diff01 = d0 - d1, diff12 = d1 - d2;
+      if (diff01 === diff12 && diff01 !== 0) {
+        const nextDay   = d0 + diff01;
+        const nextMInfo = addHebMonths(hd0.getFullYear(), hd0.getMonth(), 1);
+        const maxDay    = getHebDaysInMonth(nextMInfo.year, nextMInfo.month);
+        // אם יום מחוץ לטווח → קפוץ לא' של החודש שאחריו
+        let nextHd;
+        if (nextDay < 1) {
+          const prevM = addHebMonths(nextMInfo.year, nextMInfo.month, -1);
+          nextHd = new HDateCtor(getHebDaysInMonth(prevM.year, prevM.month), prevM.month, prevM.year);
+        } else if (nextDay > maxDay) {
+          const skip = addHebMonths(nextMInfo.year, nextMInfo.month, 1);
+          nextHd = new HDateCtor(1, skip.month, skip.year);
+        } else {
+          nextHd = new HDateCtor(nextDay, nextMInfo.month, nextMInfo.year);
+        }
+        results.push({ type: "dilug_month", diff: diff01, nextHd });
+      }
+    }
+
+    // ── 2. וסת ההפלגה בדילוג ──
+    // הפרש בין ההפלגות קבוע ושונה מאפס (int01 ≠ int12)
+    if (int01 > 0 && int12 > 0 && int01 !== int12) {
+      const step = int01 - int12; // סטפ חיובי = הפלגה גדלה; שלילי = מתקצרת
+      const nextRaw = int01 + step;
+      if (nextRaw > 0) {
+        const nextHd = hd0.add(nextRaw, "d");
+        results.push({ type: "dilug_haflagah", step, interval: int01 + 1, nextHd });
+      }
+    }
+
+    // ── 3. וסת ימי השבוע ──
+    // אותו יום בשבוע, הפרש שווה וכפולה של 7
+    const dow0 = e0.date.getDay(), dow1 = e1.date.getDay(), dow2 = e2.date.getDay();
+    if (dow0 === dow1 && dow1 === dow2 && int01 === int12 && int01 > 0 && int01 % 7 === 0) {
+      const weekNames = ["ראשון","שני","שלישי","רביעי","חמישי","שישי","שבת"];
+      const nextHd = hd0.add(int01, "d");
+      results.push({ type: "weekly", dayName: weekNames[dow0], weeksInterval: int01 / 7, nextHd });
+    }
+
+    // ── 4. וסת הסירוג ──
+    // אותו יום עברי, הפרש 2 חודשים עבריים בין כל זוג
+    if (d0 === d1 && d1 === d2 && m10 === 2 && m21 === 2) {
+      const nextMInfo = addHebMonths(hd0.getFullYear(), hd0.getMonth(), 2);
+      const maxDay    = getHebDaysInMonth(nextMInfo.year, nextMInfo.month);
+      const nextHd    = d0 <= maxDay
+        ? new HDateCtor(d0, nextMInfo.month, nextMInfo.year)
+        : new HDateCtor(maxDay, nextMInfo.month, nextMInfo.year);
+      results.push({ type: "sirug", hDay: d0, nextHd });
+    }
+
+  } catch {}
+
+  return results;
+}
+
+/**
+ * חישוב המועד הצפוי ה-k של וסת קבוע, החל מ-baseHd.
+ * @param {Object} fixed   — { type, hDay?, interval? }
+ * @param {HDate}  baseHd  — HDate של הרשומה האחרונה שאישרה את הוסת
+ * @param {number} k       — מספר ההיקרות (1, 2, 3, ...)
+ * @returns {Date|null}    — תאריך גרגוריאני
+ */
+function computeExpectedOccurrence(fixed, baseHd, k) {
+  try {
+    if (fixed.type === "month") {
+      const nm       = addHebMonths(baseHd.getFullYear(), baseHd.getMonth(), k);
+      const daysInNm = getHebDaysInMonth(nm.year, nm.month);
+      let occ;
+      if (fixed.hDay > daysInNm) {
+        const skip = addHebMonths(nm.year, nm.month, 1);
+        occ = new HDateCtor(1, skip.month, skip.year);
+      } else {
+        occ = new HDateCtor(fixed.hDay, nm.month, nm.year);
+      }
+      return occ.greg();
+    } else {
+      return baseHd.add((fixed.interval - 1) * k, "d").greg();
+    }
+  } catch { return null; }
+}
+
+/**
+ * מנתח את המצב ההלכתי המלא של הוסת על סמך כל ההיסטוריה:
+ *   "fixed"   — 3 הרשומות האחרונות קובעות וסת קבוע
+ *   "changed" — וסת קבוע פעיל מהעבר, אך הראיה האחרונה שונה; טרם נעקר
+ *   "none"    — אין וסת קבוע (לא נקבע / נעקר)
+ *
+ * עקירה: וסת קבוע נעקר אחרי 3 פעמים רצופות שהגיע ולא ראתה.
+ * חזרה: אם ראתה בזמן הקבוע לפני 3 פוספוסים — חוזרת לוסת הקבוע.
+ *
+ * @param {Array} entries — מיון מחדש לישן
+ * @returns {{ mode, fixed?, confirmedBaseHd?, missedCount? }}
+ */
+function getActiveVesetState(entries) {
+  if (!HDateCtor) return { mode: "none" };
+
+  // בדיקה מהירה: 3 האחרונות = וסת קבוע?
+  if (entries.length >= 3) {
+    const quick = detectFixedVeset(entries);
+    if (quick) return { mode: "fixed", fixed: quick };
   }
 
+  // חיפוש החלון הכי-חדש שיצר וסת קבוע בהיסטוריה
+  let estFixed  = null;
+  let estBaseHd = null;
+
+  for (let i = 0; i <= entries.length - 3; i++) {
+    const f = detectFixedVeset([entries[i], entries[i + 1], entries[i + 2]]);
+    if (f) {
+      estFixed  = f;
+      estBaseHd = new HDateCtor(entries[i].date); // הרשומה החדשה ביותר בחלון
+      break;
+    }
+  }
+
+  if (!estFixed) return { mode: "none" };
+
+  // סימולציה קדימה מהבסיס — ספירת פוספוסים וחזרות
+  const today  = startOfDay(new Date());
+  const isoSet = new Set(entries.map(e => e.iso));
+  let baseHd   = estBaseHd;
+  let missed   = 0;
+  let k        = 1;
+
+  while (true) {
+    const expGreg = computeExpectedOccurrence(estFixed, baseHd, k);
+    if (!expGreg || expGreg > today) break;
+
+    if (isoSet.has(isoKey(expGreg))) {
+      // ראתה בזמן הקבוע — אישור, מאפסים
+      baseHd = new HDateCtor(expGreg);
+      missed = 0;
+      k      = 1;
+    } else {
+      missed++;
+      if (missed >= 3) return { mode: "none" }; // נעקר
+      k++;
+    }
+  }
+
+  // עדיין פעיל: הראיה האחרונה (entries[0]) שונה מהוסת הקבוע
+  return { mode: "changed", fixed: estFixed, confirmedBaseHd: baseHd, missedCount: missed };
+}
+
+/**
+ * מחשב וסת החודש עבור חודש מסוים (עם טיפול במקרה קצה של חודש חסר).
+ */
+function monthVesetForOffset(currHd, offsetMonths) {
+  const nm        = addHebMonths(currHd.getFullYear(), currHd.getMonth(), offsetMonths);
+  const daysInNm  = getHebDaysInMonth(nm.year, nm.month);
+  if (currHd.getDate() > daysInNm) {
+    const skip = addHebMonths(nm.year, nm.month, 1);
+    return new HDateCtor(1, skip.month, skip.year);
+  }
+  return new HDateCtor(currHd.getDate(), nm.month, nm.year);
+}
+
+function computeMarks() {
+  if (!HDateCtor) return { marks: {}, summary: "כדי לראות חישובים יש לאפשר טעינת הספרייה (CDN)." };
+  const entries = getSortedEntries();           // כל הרשומות, מחדש לישן
+  const [current, previous] = entries;
+  if (!current) return { marks: {}, summary: "לחצו על תאריך כדי לרשום יום/לילה." };
+
+  const oz      = state.settings?.ozEnabled;
+  const ozType  = state.settings?.ozType || "all";
+  const day31   = state.settings?.day31Enabled;
+  const fullDay = state.settings?.fullDayEnabled;
+
+  const currHd = new HDateCtor(current.date);
+
   const marks = {};
-  // cat: "veset" | "hefsek-eligible" | "hefsek" | "nekiim"
   const mark = (iso, label, cat = "veset") => {
     if (!marks[iso]) marks[iso] = [];
     marks[iso].push({ label, cat });
   };
 
-  // ── עונה בינונית ──
-  // fullDay: מסמנת גם את הלילה שלפני (= היום הגרגוריאני הקודם)
-  if (fullDay) {
-    mark(isoKey(prevDay(rule1.greg())), "עונה בינונית");
-  }
-  mark(isoKey(rule1.greg()), "עונה בינונית");
-
-  // ── חומרת יום ל״א ──
-  if (day31) {
-    const rule1_31 = currHd.add(30, "d");   // יום 31
-    if (fullDay) {
-      mark(isoKey(prevDay(rule1_31.greg())), "עונה בינונית (ל״א)");
-    }
-    mark(isoKey(rule1_31.greg()), "עונה בינונית (ל״א)");
-
-    if (oz) {
-      mark(isoKey(prevDay(rule1_31.greg())), "אור זרוע (ל״א)");
-    }
+  /** סימון יום פרישה + לילה מוקדם (אם fullDay) + אור זרוע (אם oz) */
+  function markVesetDay(greg, label, ozLabel) {
+    if (fullDay) mark(isoKey(prevDay(greg)), label);
+    mark(isoKey(greg), label);
+    if (oz && ozLabel) mark(isoKey(prevDay(greg)), ozLabel);
   }
 
-  // ── וסת החודש ──
-  mark(isoKey(rule2.greg()), "וסת החודש");
-
-  // ── סיכום טקסט ──
   let sum = `רשומה אחרונה: ${hebFullGem(current.date)} — ${current.tod === "night" ? "לילה" : "יום"}`;
-  sum += `\nעונה בינונית: ${hebFullGem(rule1.greg())}`;
-  if (fullDay) sum += ` (+ לילה מוקדם: ${hebFullGem(prevDay(rule1.greg()))})`;
-  if (day31) {
-    const rule1_31 = currHd.add(30, "d");
-    sum += `\nחומרת יום ל״א: ${hebFullGem(rule1_31.greg())}`;
-    if (fullDay) sum += ` (+ לילה מוקדם: ${hebFullGem(prevDay(rule1_31.greg()))})`;
-  }
-  sum += `\nוסת החודש: ${hebFullGem(rule2.greg())}`;
 
-  // ── אור זרוע ──
-  if (oz) {
-    // אור זרוע = יום אחד לפני תאריך הפרישה הגרגוריאני
-    const oz1 = prevDay(rule1.greg());
-    mark(isoKey(oz1), "אור זרוע (בינונית)");
-    sum += `\nאור זרוע (בינונית): ${hebFullGem(oz1)}`;
-    if (ozType !== "beinonit") {
-      const oz2 = prevDay(rule2.greg());
-      mark(isoKey(oz2), "אור זרוע (חודש)");
-      sum += `\nאור זרוע (חודש): ${hebFullGem(oz2)}`;
+  // ══════════════════════════════════════════════════════════════
+  // ניתוח מצב הוסת (קבוע / שינוי / ללא)
+  // ══════════════════════════════════════════════════════════════
+  const vesetState = getActiveVesetState(entries);
+
+  // ── עזר: סימון 3 הופעות של וסת קבוע ──
+  function markFixedOccurrences(fixed, baseHd) {
+    const isMonth  = fixed.type === "month";
+    const step     = isMonth ? null : fixed.interval - 1;
+    for (let i = 1; i <= 3; i++) {
+      let occGreg;
+      if (isMonth) {
+        occGreg = monthVesetForOffset(baseHd, i).greg();
+      } else {
+        occGreg = baseHd.add(step * i, "d").greg();
+      }
+      const typeName = isMonth ? "חודש" : "הפלגה";
+      const lbl    = `וסת ה${typeName} הקבוע (${i}/3)`;
+      const ozLbl  = oz && ozType !== "beinonit" ? `אור זרוע (${typeName} ${i}/3)` : null;
+      markVesetDay(occGreg, lbl, ozLbl);
+      sum += `\n${lbl}: ${hebFullGem(occGreg)}`;
+      if (oz && ozLbl) sum += `\n${ozLbl}: ${hebFullGem(prevDay(occGreg))}`;
+    }
+    // הפלגה > 30: עונה בינונית (ברירת מחדל: חומרה; ויש מקילים)
+    if (!isMonth && fixed.interval > 30) {
+      const rule1   = new HDateCtor(entries[0].date).add(29, "d");
+      const ozBLbl  = oz ? "אור זרוע (בינונית)" : null;
+      markVesetDay(rule1.greg(), "עונה בינונית", ozBLbl);
+      sum += `\nעונה בינונית: ${hebFullGem(rule1.greg())} (הפלגה מעל ל׳)`;
+      if (oz && ozBLbl) sum += `\n${ozBLbl}: ${hebFullGem(prevDay(rule1.greg()))}`;
     }
   }
 
-  // ── וסת ההפלגה ──
-  if (previous) {
-    const prevHd   = new HDateCtor(previous.date);
-    const interval = Math.abs(currHd.abs() - prevHd.abs()) + 1;
-    const rule3    = currHd.add(Math.max(0, interval - 1), "d");
+  if (vesetState.mode === "fixed") {
+    // ══════════════════════════════════════════════════════════════
+    // וסת קבוע — 3 הופעות קדימה בלבד
+    // ══════════════════════════════════════════════════════════════
+    const { fixed } = vesetState;
+    const fixedDesc = fixed.type === "month"
+      ? `וסת החודש הקבוע — ${numToGem(fixed.hDay)} לחודש`
+      : `וסת ההפלגה הקבוע — ${fixed.interval} ימים`;
+    sum += `\n\n▪ ${fixedDesc}`;
+    markFixedOccurrences(fixed, currHd);
 
-    if (fullDay) {
-      mark(isoKey(prevDay(rule3.greg())), "וסת ההפלגה");
-    }
-    mark(isoKey(rule3.greg()), "וסת ההפלגה");
+  } else if (vesetState.mode === "changed") {
+    // ══════════════════════════════════════════════════════════════
+    // שינוי מוסת קבוע — חוששת גם לקבוע וגם לחדש (ללא עונה בינונית)
+    // ══════════════════════════════════════════════════════════════
+    const { fixed, confirmedBaseHd, missedCount } = vesetState;
+    const fixedDesc = fixed.type === "month"
+      ? `וסת החודש הקבוע — ${numToGem(fixed.hDay)} לחודש`
+      : `וסת ההפלגה הקבוע — ${fixed.interval} ימים`;
+    sum += `\n\n▪ שינוי מוסת קבוע (${fixedDesc}, פוספס ${missedCount}/3)`;
 
-    sum += `\nרשומה קודמת: ${hebFullGem(previous.date)} — ${previous.tod === "night" ? "לילה" : "יום"}`;
-    sum += `\nוסת ההפלגה: ${interval} ימים → ${hebFullGem(rule3.greg())}`;
-    if (fullDay) sum += ` (+ לילה מוקדם: ${hebFullGem(prevDay(rule3.greg()))})`;
+    // א. הוסת הקבוע הישן — עדיין בתוקף, חוששת לו
+    if (fixed.type === "month") {
+      // וסת חודש: אותו יום עברי לחודש, ללא קשר למחלוקת
+      sum += `\nחשש לוסת החודש הקבוע (${numToGem(fixed.hDay)} לחודש, טרם נעקר):`;
+      markFixedOccurrences(fixed, confirmedBaseHd);
 
-    if (oz && ozType !== "beinonit") {
-      const oz3 = prevDay(rule3.greg());
-      mark(isoKey(oz3), "אור זרוע (הפלגה)");
-      sum += `\nאור זרוע (הפלגה): ${hebFullGem(oz3)}`;
-    }
-  } else {
-    sum += `\nוסת ההפלגה: הוסיפי גם רשומה קודמת כדי לחשב.`;
-  }
+    } else {
+      // וסת הפלגה: חישוב לפי שיטת הפוסק
+      const method        = state.settings?.fixedHaflagahMethod || "beit_yosef";
+      const step          = fixed.interval - 1;
+      const lastMissedGreg = computeExpectedOccurrence(fixed, confirmedBaseHd, missedCount);
+      const lastMissedHd   = lastMissedGreg ? new HDateCtor(lastMissedGreg) : null;
 
-  // ── ימים כשירים להפסק טהרה ──
-  if (current) {
-    const eligibleDate = getHefsekEligibleDate(current.iso);
-    const vestDateH    = parseIsoKey(current.iso);
-    if (eligibleDate && vestDateH) {
-      const hasValidHefsekH = Object.entries(state.entries || {}).some(([iso, rec]) => {
-        if (rec?.hefsek !== "ok") return false;
-        const d = parseIsoKey(iso);
-        return d && d > vestDateH;
-      });
-      if (!hasValidHefsekH) {
-        mark(isoKey(eligibleDate), "תחילת זמן הפסק", "hefsek-eligible");
+      sum += `\nחשש לוסת ההפלגה הקבוע (${fixed.interval} ימים, פוספס ${missedCount}/3):`;
+
+      if ((method === "beit_yosef" || method === "taz") && lastMissedHd) {
+        // ב״י: סופרת מיום הקביעות המקורי (היום שהיה אמור)
+        sum += `\n  ב״י — מיום ${hebFullGem(lastMissedGreg)}:`;
+        for (let i = 1; i <= 3; i++) {
+          const occGreg = lastMissedHd.add(step * i, "d").greg();
+          const lbl     = `ב״י — הפלגה קבועה (${i}/3)`;
+          const ozLbl   = oz && ozType !== "beinonit" ? `אור זרוע (ב״י ${i}/3)` : null;
+          markVesetDay(occGreg, lbl, ozLbl);
+          sum += `\n  ${lbl}: ${hebFullGem(occGreg)}`;
+          if (oz && ozLbl) sum += `\n  ${ozLbl}: ${hebFullGem(prevDay(occGreg))}`;
+        }
+      }
+
+      if (method === "rashal" || method === "taz") {
+        // רש״ל: סופרת מיום הראיה האחרונה בפועל
+        sum += `\n  רש״ל — מיום ${hebFullGem(current.date)}:`;
+        for (let i = 1; i <= 3; i++) {
+          const occGreg = currHd.add(step * i, "d").greg();
+          const lbl     = `רש״ל — הפלגה קבועה (${i}/3)`;
+          const ozLbl   = oz && ozType !== "beinonit" ? `אור זרוע (רש״ל ${i}/3)` : null;
+          markVesetDay(occGreg, lbl, ozLbl);
+          sum += `\n  ${lbl}: ${hebFullGem(occGreg)}`;
+          if (oz && ozLbl) sum += `\n  ${ozLbl}: ${hebFullGem(prevDay(occGreg))}`;
+        }
       }
     }
+
+    // ב. ראיה חדשה — וסת החודש + הפלגה (ללא עונה בינונית!)
+    sum += `\nחשש מהראיה החדשה (${current.tod === "night" ? "לילה" : "יום"} ${hebFullGem(current.date)}):`;
+
+    // וסת החודש
+    const rule2   = monthVesetForOffset(currHd, 1);
+    const ozChLbl = oz && ozType !== "beinonit" ? "אור זרוע (חודש)" : null;
+    markVesetDay(rule2.greg(), "וסת החודש", ozChLbl);
+    sum += `\nוסת החודש: ${hebFullGem(rule2.greg())}`;
+    if (oz && ozChLbl) sum += `\n${ozChLbl}: ${hebFullGem(prevDay(rule2.greg()))}`;
+
+    // וסת ההפלגה
+    if (previous) {
+      const prevHd   = new HDateCtor(previous.date);
+      const interval = Math.abs(currHd.abs() - prevHd.abs()) + 1;
+      const rule3    = currHd.add(interval - 1, "d");
+      const ozHfLbl  = oz && ozType !== "beinonit" ? "אור זרוע (הפלגה)" : null;
+      markVesetDay(rule3.greg(), "וסת ההפלגה", ozHfLbl);
+      sum += `\nוסת ההפלגה: ${interval} ימים → ${hebFullGem(rule3.greg())}`;
+      if (oz && ozHfLbl) sum += `\n${ozHfLbl}: ${hebFullGem(prevDay(rule3.greg()))}`;
+    }
+    // ← אין עונה בינונית! הוסת הקבוע פוטר ממנה
+
+  } else {
+    // ══════════════════════════════════════════════════════════════
+    // וסת שאינו קבוע — 3 חישובים רגילים
+    // ══════════════════════════════════════════════════════════════
+    const rule1 = currHd.add(29, "d"); // עונה בינונית (יום 30)
+
+    // וסת החודש — אותו יום עברי בחודש הבא
+    const rule2 = monthVesetForOffset(currHd, 1);
+
+    // ── עונה בינונית ──
+    markVesetDay(rule1.greg(), "עונה בינונית", oz ? "אור זרוע (בינונית)" : null);
+
+    // ── חומרת יום ל״א ──
+    if (day31) {
+      const rule1_31 = currHd.add(30, "d");
+      markVesetDay(rule1_31.greg(), "עונה בינונית (ל״א)", oz ? "אור זרוע (ל״א)" : null);
+    }
+
+    // ── וסת החודש ──
+    const ozChLabel = oz && ozType !== "beinonit" ? "אור זרוע (חודש)" : null;
+    markVesetDay(rule2.greg(), "וסת החודש", ozChLabel);
+
+    // ── סיכום ──
+    sum += `\nעונה בינונית: ${hebFullGem(rule1.greg())}`;
+    if (fullDay) sum += ` (+ לילה מוקדם: ${hebFullGem(prevDay(rule1.greg()))})`;
+    if (day31) {
+      const rule1_31 = currHd.add(30, "d");
+      sum += `\nחומרת יום ל״א: ${hebFullGem(rule1_31.greg())}`;
+      if (fullDay) sum += ` (+ לילה מוקדם: ${hebFullGem(prevDay(rule1_31.greg()))})`;
+    }
+    sum += `\nוסת החודש: ${hebFullGem(rule2.greg())}`;
+    if (oz) {
+      sum += `\nאור זרוע (בינונית): ${hebFullGem(prevDay(rule1.greg()))}`;
+      if (ozType !== "beinonit") sum += `\nאור זרוע (חודש): ${hebFullGem(prevDay(rule2.greg()))}`;
+    }
+
+    // ── וסת ההפלגה ──
+    if (previous) {
+      const prevHd   = new HDateCtor(previous.date);
+      const interval = Math.abs(currHd.abs() - prevHd.abs()) + 1;
+      const rule3    = currHd.add(Math.max(0, interval - 1), "d");
+      const ozHfLbl  = oz && ozType !== "beinonit" ? "אור זרוע (הפלגה)" : null;
+      markVesetDay(rule3.greg(), "וסת ההפלגה", ozHfLbl);
+      sum += `\nרשומה קודמת: ${hebFullGem(previous.date)} — ${previous.tod === "night" ? "לילה" : "יום"}`;
+      sum += `\nוסת ההפלגה: ${interval} ימים → ${hebFullGem(rule3.greg())}`;
+      if (fullDay) sum += ` (+ לילה מוקדם: ${hebFullGem(prevDay(rule3.greg()))})`;
+      if (oz && ozHfLbl) sum += `\nאור זרוע (הפלגה): ${hebFullGem(prevDay(rule3.greg()))}`;
+    } else {
+      sum += `\nוסת ההפלגה: הוסיפו גם רשומה קודמת כדי לחשב.`;
+    }
+  }
+
+  // ══════════════════════════════════════════════════════════════
+  // וסתות פחות מצויים — חשש נוסף, לא מבטל את הרגילים
+  // ══════════════════════════════════════════════════════════════
+  const rarePatterns = detectRareVesetPatterns(entries);
+  for (const p of rarePatterns) {
+    let lbl = "", nextGreg = null;
+    try {
+      switch (p.type) {
+        case "dilug_month":
+          nextGreg = p.nextHd.greg();
+          lbl = `דילוג חודש (${p.diff > 0 ? "+" : ""}${p.diff} יום)`;
+          break;
+        case "dilug_haflagah":
+          nextGreg = p.nextHd.greg();
+          lbl = `דילוג הפלגה (${p.interval + p.step - 1}→${p.interval + p.step} ימים)`;
+          break;
+        case "weekly":
+          nextGreg = p.nextHd.greg();
+          lbl = `וסת יום ${p.dayName} (כל ${p.weeksInterval} שבועות)`;
+          break;
+        case "sirug":
+          nextGreg = p.nextHd.greg();
+          lbl = `וסת הסירוג (${numToGem(p.hDay)} לחודש, כל חודשיים)`;
+          break;
+      }
+    } catch {}
+
+    if (!nextGreg) continue;
+    const rLabel = `⁓ ${lbl}`;
+    mark(isoKey(nextGreg), rLabel, "veset-rare");
+    if (fullDay) mark(isoKey(prevDay(nextGreg)), rLabel, "veset-rare");
+    sum += `\n\n◈ ${lbl}: ${hebFullGem(nextGreg)}`;
+  }
+
+  // ══════════════════════════════════════════════════════════════
+  // הפסק טהרה + שבעה נקיים (תמיד)
+  // ══════════════════════════════════════════════════════════════
+
+  // ── ימים כשירים להפסק טהרה ──
+  const eligibleDate = getHefsekEligibleDate(current.iso);
+  const vestDateH    = parseIsoKey(current.iso);
+  if (eligibleDate && vestDateH) {
+    const hasValidHefsek = Object.entries(state.entries || {}).some(([iso, rec]) => {
+      if (rec?.hefsek !== "ok") return false;
+      const d = parseIsoKey(iso);
+      return d && d > vestDateH;
+    });
+    if (!hasValidHefsek) mark(isoKey(eligibleDate), "תחילת זמן הפסק", "hefsek-eligible");
   }
 
   // ── הפסק טהרה ──
@@ -930,7 +1305,11 @@ function computeMarks() {
   const nekiimRange = getShivaNekiimRange();
   if (nekiimRange) {
     for (let i = 1; i <= 7; i++) {
-      const d = new Date(nekiimRange.start.getFullYear(), nekiimRange.start.getMonth(), nekiimRange.start.getDate() + (i - 1));
+      const d = new Date(
+        nekiimRange.start.getFullYear(),
+        nekiimRange.start.getMonth(),
+        nekiimRange.start.getDate() + (i - 1)
+      );
       mark(isoKey(d), i === 7 ? `נקי ${i} · ערב טבילה` : `נקי ${i}`, "nekiim");
     }
   }
@@ -973,7 +1352,7 @@ function renderMonth() {
     : GREG_MONTHYR_FMT.format(firstGreg);
   els.monthSub.textContent = state.selectedIso
     ? `נבחר: ${hebFullGem(parseIsoKey(state.selectedIso) || firstGreg)}`
-    : "לחצי על יום כדי לבחור.";
+    : "לחצו על יום כדי לבחור.";
 
   const today = startOfDay(new Date());
   const { marks, summary } = computeMarks();
@@ -1065,6 +1444,7 @@ function buildCell({ date, muted, today, marks }) {
     cell.appendChild(mk);
   };
   addPill("veset",          "cell__pill--veset");
+  addPill("veset-rare",     "cell__pill--veset-rare");
   addPill("hefsek-eligible","cell__pill--hefsek-eligible");
   addPill("hefsek",         "cell__pill--hefsek");
   addPill("nekiim",         "cell__pill--nekiim");
@@ -1218,7 +1598,7 @@ function buildCell({ date, muted, today, marks }) {
             },
           },
           {
-            label: "מחיקה", className: "btn btn--danger",
+            label: "בטל סימון", className: "btn btn--danger",
             onClick: () => {
               delete state.entries[key];
               saveJson(STORAGE.entries, state.entries);
@@ -1226,8 +1606,8 @@ function buildCell({ date, muted, today, marks }) {
             },
           },
           {
-            label: "ביטול", className: "btn btn--ghost",
-            onClick: () => renderMonth(),
+            label: "סגור", className: "btn btn--ghost",
+            onClick: () => {},
           },
         ],
         anchorRect: anchor,
@@ -1359,7 +1739,7 @@ function clearAll() {
     bodyText: "האם את בטוחה שברצונך למחוק את כל הנתונים לצמיתות? פעולה זו אינה הפיכה.",
     actions: [
       {
-        label: "מחקי הכל", className: "btn btn--danger",
+        label: "מחקו הכל", className: "btn btn--danger",
         onClick: () => {
           state.entries = {}; state.selectedIso = null;
           saveJson(STORAGE.entries, state.entries);
@@ -1504,6 +1884,13 @@ els.day31Toggle?.addEventListener("click", () => {
   renderMonth();
 });
 
+// שיטת חישוב הפלגה קבועה שפוספסה
+els.fixedHaflagahSelect?.addEventListener("change", (e) => {
+  state.settings.fixedHaflagahMethod = e.target.value;
+  saveSettings(state.settings);
+  renderMonth();
+});
+
 // טוגל עונה בינונית כיממה שלמה
 els.fullDayToggle?.addEventListener("click", () => {
   const newVal = els.fullDayToggle.getAttribute("aria-checked") !== "true";
@@ -1528,7 +1915,7 @@ els.notificationsToggle?.addEventListener("click", async () => {
 
   // הדלקה — בדפדפנים שלא תומכים ב-Notifications
   if (!("Notification" in window)) {
-    alert("הדפדפן שלך אינו תומך בהתראות. נסי להוסיף את האפליקציה למסך הבית (PWA).");
+    alert("הדפדפן שלך אינו תומך בהתראות. נסו להוסיף את האפליקציה למסך הבית (PWA).");
     return;
   }
 
@@ -1629,7 +2016,7 @@ els.notifSoundFile?.addEventListener("change", (e) => {
   const file = e.target.files?.[0];
   if (!file) return;
   if (file.size > 3 * 1024 * 1024) {
-    alert("הקובץ גדול מדי (מקסימום 3MB). בחרי קובץ קצר יותר.");
+    alert("הקובץ גדול מדי (מקסימום 3MB). בחרו קובץ קצר יותר.");
     e.target.value = "";
     return;
   }
@@ -1639,7 +2026,7 @@ els.notifSoundFile?.addEventListener("change", (e) => {
       localStorage.setItem(STORAGE.soundData, ev.target.result);
       if (els.notifSoundFileName) els.notifSoundFileName.textContent = file.name;
     } catch {
-      alert("לא ניתן לשמור את הקובץ. ייתכן שאין מקום מספיק. בחרי קובץ קצר יותר.");
+      alert("לא ניתן לשמור את הקובץ. ייתכן שאין מקום מספיק. בחרו קובץ קצר יותר.");
     }
   };
   reader.readAsDataURL(file);
@@ -1729,7 +2116,7 @@ document.getElementById("contact-form")?.addEventListener("submit", async (e) =>
       body: data,
     });
     if (!res.ok) throw new Error();
-    statusEl.textContent = "הפנייה נשלחה בהצלחה! נחזור אלייך בהקדם.";
+    statusEl.textContent = "הפנייה נשלחה בהצלחה! נחזור אליכם בהקדם.";
     statusEl.className   = "contact-status contact-status--ok";
     form.reset();
   } catch {
@@ -1800,8 +2187,9 @@ if (els.day31Toggle          && state.settings.day31Enabled)         els.day31To
 if (els.fullDayToggle        && state.settings.fullDayEnabled)       els.fullDayToggle.setAttribute("aria-checked",       "true");
 
 // עמימת/הפעלת שורת טווח אור זרוע לפי מצב הטוגל
-if (els.ozScopeRow)   els.ozScopeRow.classList.toggle("setting-row--disabled", !state.settings.ozEnabled);
-if (els.ozTypeSelect) els.ozTypeSelect.value = state.settings.ozType || "all";
+if (els.ozScopeRow)          els.ozScopeRow.classList.toggle("setting-row--disabled", !state.settings.ozEnabled);
+if (els.ozTypeSelect)        els.ozTypeSelect.value = state.settings.ozType || "all";
+if (els.fixedHaflagahSelect) els.fixedHaflagahSelect.value = state.settings.fixedHaflagahMethod || "beit_yosef";
 
 // התראות — מציגים כדלוק רק אם גם ההגדרה וגם ההרשאה קיימות
 const _notifActive = state.settings.notificationsEnabled

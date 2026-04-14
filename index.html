@@ -66,8 +66,8 @@
             <div class="drawer__row">
               <div class="drawer__title">מיקום לזמני יום</div>
               <div class="location-row">
-                <select id="city-select" class="select" aria-label="בחרי עיר">
-                  <option value="">— בחרי עיר —</option>
+                <select id="city-select" class="select" aria-label="בחירת עיר">
+                  <option value="">— בחרו עיר —</option>
                   <option value="31.7683,35.2137">ירושלים</option>
                   <option value="32.0853,34.7818">תל אביב</option>
                   <option value="32.7940,34.9896">חיפה</option>
@@ -80,7 +80,7 @@
             </div>
 
             <div class="drawer__row">
-              <div id="calc-summary" class="summary">לחצי על תאריך כדי לרשום יום/לילה. החישובים יוצגו ויסומנו בלוח.</div>
+              <div id="calc-summary" class="summary">לחצו על תאריך כדי לרשום יום/לילה. החישובים יוצגו ויסומנו בלוח.</div>
             </div>
 
             <div class="drawer__row">
@@ -97,7 +97,7 @@
 
       <footer class="footer">
         <div class="footer__note">טיפ: ניווט במקלדת — → חודש קודם, ← חודש הבא.</div>
-        <div class="footer__memorial">לע״נ אסתר בת חנה ז״ל</div>
+        <div class="footer__memorial">לע״נ אסתר בת חנה ז״ל &nbsp;|&nbsp; להצלחת שירה בת אסתר וב״ב</div>
       </footer>
     </div>
 
@@ -176,6 +176,18 @@
               </button>
             </div>
 
+            <div class="setting-row">
+              <div class="setting-label">
+                <div class="setting-name">הפלגה קבועה שפוספסה</div>
+                <div class="setting-desc">מאיזה יום לחשב כשלא ראתה ביום הפלגתה הקבועה</div>
+              </div>
+              <select id="fixed-haflagah-select" class="select select--small" aria-label="שיטת חישוב הפלגה קבועה שפוספסה">
+                <option value="beit_yosef">ב״י — מיום הקביעות</option>
+                <option value="rashal">רש״ל — מיום הראיה</option>
+                <option value="taz">ט״ז — שתי הדעות</option>
+              </select>
+            </div>
+
           </div>
 
           <!-- ══ לשונית: עיצוב ══ -->
@@ -184,7 +196,7 @@
             <div class="setting-row">
               <div class="setting-label">
                 <div class="setting-name">עיצוב רקע</div>
-                <div class="setting-desc">בחרי את מראה האפליקציה</div>
+                <div class="setting-desc">בחרו את מראה האפליקציה</div>
               </div>
               <select id="theme-select" class="select select--small" aria-label="עיצוב רקע">
                 <option value="dark">כהה</option>
@@ -409,7 +421,7 @@
 
             <div class="contact-intro">
               <div class="setting-name">דיווח על תקלות ופניות</div>
-              <div class="setting-desc">מלאי את הפרטים ואחזור אלייך בהקדם</div>
+              <div class="setting-desc">מלאו את הפרטים ונחזור אליכם בהקדם</div>
             </div>
 
             <form id="contact-form" class="contact-form" novalidate>
