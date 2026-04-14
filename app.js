@@ -1017,8 +1017,12 @@ function getActiveVesetState(entries) {
     const expGreg = computeExpectedOccurrence(estFixed, baseHd, k);
     if (!expGreg || expGreg > today) break;
 
-    if (isoSet.has(isoKey(expGreg))) {
-      // ראתה בזמן הקבוע — אישור, מאפסים
+    const expectedIso = isoKey(expGreg);
+    const rec = state.entries[expectedIso];
+
+    // בדיקה הלכתית: גם התאריך וגם העונה (יום/לילה) חייבים להיות תואמים לוסת הקבוע
+    if (rec && rec.tod === estFixed.tod) {
+      // ראתה בזמן הקבוע (ובאותה עונה!) — אישור, מאפסים
       baseHd = new HDateCtor(expGreg);
       missed = 0;
       k      = 1;
