@@ -54,6 +54,9 @@ const els = {
   notifSoundFile:       document.querySelector("#notif-sound-file"),
   notifSoundFileBtn:    document.querySelector("#notif-sound-file-btn"),
   notifSoundFileName:   document.querySelector("#notif-sound-file-name"),
+  pillsToggle:          document.querySelector("#pills-toggle"),
+  pillsFields:          document.querySelector("#pills-fields"),
+  pillsIntervalDisplay: document.querySelector("#pills-interval-display"),
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -364,6 +367,8 @@ const DEFAULT_SETTINGS = {
   hefsekEveningTime: "",      // שעה קבועה לבדיקת ערב (ריק = לפי דקות)
   hefsekMikvehReminder: true, // תזכורת טבילה ביום 7
   hefsekMikvehTime: "",       // שעה קבועה לתזכורת טבילה (ריק = לפי שקיעה)
+  // ── גלולות/התקן ──
+  pillsEnabled: false,
 };
 
 function loadSettings() {
@@ -547,13 +552,13 @@ function checkDailyNotifications() {
     }
   }
 
-  // ── תזכורת הפסק טהרה ──
+  // ── תזכורת הפסק טהרה — רק ביום המדויק ──
   const vestList = getSortedEntries();
   const lastVest = vestList[0];
   if (lastVest) {
-    const eligibleDate = getHefsekEligibleDate(lastVest.iso);
-    const vestDate     = parseIsoKey(lastVest.iso);
-    if (eligibleDate && now >= eligibleDate) {
+    const targetDate = getCurrentHefsekTargetDate(lastVest.iso);
+    const vestDate   = parseIsoKey(lastVest.iso);
+    if (targetDate && sameYmd(now, targetDate)) {
       const hasValidHefsek = Object.entries(state.entries || {}).some(([iso, rec]) => {
         if (rec?.hefsek !== "ok") return false;
         const d = parseIsoKey(iso);
@@ -733,8 +738,35 @@ function getHefsekEligibleDate(vestIsoKey) {
   const vestDate = parseIsoKey(vestIsoKey);
   if (!vestDate) return null;
   const minDay = state.settings?.hefsekMinDay ?? 4;
-  // יום 1 = יום הווסת עצמו, ולכן מוסיפים (minDay - 1) ימים
   return new Date(vestDate.getFullYear(), vestDate.getMonth(), vestDate.getDate() + (minDay - 1));
+}
+
+/**
+ * מחשב את היום המדויק לביצוע הפסק טהרה:
+ * מתחיל מיום הכשירות הראשון, ודוחה קדימה יום אחד לכל הפסק שנכשל.
+ */
+function getCurrentHefsekTargetDate(lastVestIso) {
+  const eligible = getHefsekEligibleDate(lastVestIso);
+  if (!eligible) return null;
+  const vestDate = parseIsoKey(lastVestIso);
+
+  // איסוף כל ההפסקים שנכשלו אחרי יום הכשירות, מממוין לפי תאריך
+  const failedDates = Object.entries(state.entries || {})
+    .filter(([iso, rec]) => {
+      if (rec?.hefsek !== "fail") return false;
+      const d = parseIsoKey(iso);
+      return d && vestDate && d > vestDate && d >= eligible;
+    })
+    .map(([iso]) => parseIsoKey(iso))
+    .sort((a, b) => a - b);
+
+  let target = eligible;
+  for (const fd of failedDates) {
+    if (fd >= target) {
+      target = new Date(fd.getFullYear(), fd.getMonth(), fd.getDate() + 1);
+    }
+  }
+  return target;
 }
 
 /**
@@ -1283,19 +1315,38 @@ function computeMarks() {
   }
 
   // ══════════════════════════════════════════════════════════════
+  // פרישה מגלולות/התקן — חד-פעמי לפי תאריך הפסקה נוכחי
+  // ══════════════════════════════════════════════════════════════
+  const pillConcern = getCurrentPillConcernDate();
+  if (pillConcern) {
+    const { concernDate, tod } = pillConcern;
+    const today = startOfDay(new Date());
+    if (concernDate >= today || isoKey(concernDate) === isoKey(today)) {
+      const todLabel = tod === "night" ? "לילה 🌙" : "יום ☀️";
+      const lbl = `פרישה מגלולות/התקן — ${todLabel}`;
+      mark(isoKey(concernDate), lbl, "veset-pills");
+      sum += `\n\n◉ פרישה בגלל הפסקת גלולות/התקן:\n${lbl}: ${hebFullGem(concernDate)}`;
+    }
+  }
+  // סימון ימי הפסקת גלולות בלוח
+  for (const [iso, rec] of Object.entries(state.entries || {})) {
+    if (rec?.pillStop && state.settings.pillsEnabled) mark(iso, "💊 הפסקת גלולות", "pill-stop");
+  }
+
+  // ══════════════════════════════════════════════════════════════
   // הפסק טהרה + שבעה נקיים (תמיד)
   // ══════════════════════════════════════════════════════════════
 
-  // ── ימים כשירים להפסק טהרה ──
-  const eligibleDate = getHefsekEligibleDate(current.iso);
-  const vestDateH    = parseIsoKey(current.iso);
-  if (eligibleDate && vestDateH) {
+  // ── יום הפסק טהרה המדויק (נדחה אם היה כישלון) ──
+  const hefsekTargetDate = getCurrentHefsekTargetDate(current.iso);
+  const vestDateH        = parseIsoKey(current.iso);
+  if (hefsekTargetDate && vestDateH) {
     const hasValidHefsek = Object.entries(state.entries || {}).some(([iso, rec]) => {
       if (rec?.hefsek !== "ok") return false;
       const d = parseIsoKey(iso);
       return d && d > vestDateH;
     });
-    if (!hasValidHefsek) mark(isoKey(eligibleDate), "תחילת זמן הפסק", "hefsek-eligible");
+    if (!hasValidHefsek) mark(isoKey(hefsekTargetDate), "זמן הפסק טהרה", "hefsek-eligible");
   }
 
   // ── הפסק טהרה ──
@@ -1449,6 +1500,8 @@ function buildCell({ date, muted, today, marks }) {
   };
   addPill("veset",          "cell__pill--veset");
   addPill("veset-rare",     "cell__pill--veset-rare");
+  addPill("veset-pills",    "cell__pill--veset-pills");
+  addPill("pill-stop",      "cell__pill--pill-stop");
   addPill("hefsek-eligible","cell__pill--hefsek-eligible");
   addPill("hefsek",         "cell__pill--hefsek");
   addPill("nekiim",         "cell__pill--nekiim");
@@ -1516,13 +1569,13 @@ function buildCell({ date, muted, today, marks }) {
         const hFail = rec.hefsek === "fail"  ? " popover__check-btn--active" : "";
         extraHTML = `<div class="popover__hefsek-section"><div class="popover__hefsek-title">סטטוס: ${statusText}</div><div class="popover__check-row"><span class="popover__check-label">שנה ל:</span><button type="button" class="popover__check-btn popover__check-btn--ok${hOk}" data-hefsek="ok">✓ תקין</button><button type="button" class="popover__check-btn popover__check-btn--fail${hFail}" data-hefsek="fail">✗ ראיתי דם</button><button type="button" class="popover__check-btn popover__check-btn--del" data-hefsek-delete="1">מחק</button></div></div>`;
       } else {
-        // בדיקת זכאות להפסק טהרה
+        // הצגת כפתור הפסק מהיום המחושב ואילך (לא לפניו)
         const vestList = getSortedEntries();
         const lastVest = vestList[0];
         if (lastVest) {
-          const eligibleDate = getHefsekEligibleDate(lastVest.iso);
-          const vestDate     = parseIsoKey(lastVest.iso);
-          if (eligibleDate && date >= eligibleDate) {
+          const targetDate = getCurrentHefsekTargetDate(lastVest.iso);
+          const vestDate   = parseIsoKey(lastVest.iso);
+          if (targetDate && date >= targetDate) {
             const hasValidHefsek = Object.entries(state.entries || {}).some(([iso, r]) => {
               if (r?.hefsek !== "ok") return false;
               const d = parseIsoKey(iso);
@@ -1534,6 +1587,14 @@ function buildCell({ date, muted, today, marks }) {
           }
         }
       }
+    }
+
+    // ── מקטע הפסקת גלולות/התקן ──
+    let pillsHTML = "";
+    if (state.settings.pillsEnabled) {
+      const rec = state.entries[key] || {};
+      const isStop = !!rec.pillStop;
+      pillsHTML = `<div class="popover__pills-section"><span class="popover__check-label">💊 הפסקת גלולות/התקן</span><button type="button" class="popover__check-btn${isStop ? " popover__check-btn--active" : ""}" data-pill-stop="1">${isStop ? "✓ מסומן" : "סמן"}</button></div>`;
     }
 
     // פונקציית חיבור אירועים לכפתורי הפסק/בדיקות
@@ -1580,6 +1641,21 @@ function buildCell({ date, muted, today, marks }) {
           renderMonth();
         });
       });
+      els.popoverBody.querySelectorAll("[data-pill-stop]").forEach(btn => {
+        btn.addEventListener("click", () => {
+          if (!state.entries[key]) state.entries[key] = { updatedAt: Date.now() };
+          if (state.entries[key].pillStop) {
+            delete state.entries[key].pillStop;
+          } else {
+            state.entries[key].pillStop = true;
+          }
+          state.entries[key].updatedAt = Date.now();
+          saveJson(STORAGE.entries, state.entries);
+          closePopover();
+          renderMonth();
+          updatePillsIntervalDisplay();
+        });
+      });
     };
 
     if (existing) {
@@ -1588,7 +1664,7 @@ function buildCell({ date, muted, today, marks }) {
       const escapedFeelings  = existingFeelings.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
       openPopover({
         title,
-        bodyHTML: `<div class="popover__info">מסומן כ־${existing === "night" ? "לילה" : "יום"}.</div><label class="popover__feelings-label">הרגשות גוף<textarea class="popover__feelings-input" placeholder="למשל: כאב ראש, עייפות, כאבי בטן...">${escapedFeelings}</textarea></label>${extraHTML}`,
+        bodyHTML: `<div class="popover__info">מסומן כ־${existing === "night" ? "לילה" : "יום"}.</div><label class="popover__feelings-label">הרגשות גוף<textarea class="popover__feelings-input" placeholder="למשל: כאב ראש, עייפות, כאבי בטן...">${escapedFeelings}</textarea></label>${extraHTML}${pillsHTML}`,
         actions: [
           {
             label: "שמור", className: "btn btn--primary",
@@ -1643,7 +1719,7 @@ function buildCell({ date, muted, today, marks }) {
 
       openPopover({
         title,
-        bodyHTML: `<div class="popover__times">☀️ זריחה: ${srStr}&nbsp;&nbsp;&nbsp;🌇 שקיעה: ${ssStr}</div><label class="popover__feelings-label">הרגשות גוף (אופציונלי)<textarea class="popover__feelings-input" placeholder="למשל: כאב ראש, עייפות, כאבי בטן..."></textarea></label>${copyBtnHtml}<div class="popover__question">איך לסמן?</div>${extraHTML}`,
+        bodyHTML: `<div class="popover__times">☀️ זריחה: ${srStr}&nbsp;&nbsp;&nbsp;🌇 שקיעה: ${ssStr}</div><label class="popover__feelings-label">הרגשות גוף (אופציונלי)<textarea class="popover__feelings-input" placeholder="למשל: כאב ראש, עייפות, כאבי בטן..."></textarea></label>${copyBtnHtml}<div class="popover__question">איך לסמן?</div>${extraHTML}${pillsHTML}`,
         actions: [
           {
             label: "יום ☀️", className: dayClass,
@@ -2080,6 +2156,86 @@ els.hefsekMikvehTime?.addEventListener("change", (e) => {
   saveSettings(state.settings);
 });
 
+// ── הגדרות גלולות/התקן ──
+
+/**
+ * מחפש בהיסטוריית הלוח: הפסקת גלולות + ראייה עוקבת → מחזיר { interval, tod }.
+ * ה"הפסקה הקודמת" = הפסקת גלולות אחרונה שאחריה קיימת ראייה רשומה.
+ * ה"הפסקה הנוכחית" = הפסקת גלולות אחרונה ללא ראייה עוקבת.
+ */
+function calcPillsAuto() {
+  const stopEntries = Object.entries(state.entries || {})
+    .filter(([, rec]) => rec?.pillStop)
+    .map(([iso]) => ({ iso, date: parseIsoKey(iso) }))
+    .filter(e => e.date)
+    .sort((a, b) => b.date - a.date); // חדש לישן
+
+  for (const stop of stopEntries) {
+    const nextBleed = Object.entries(state.entries || {})
+      .filter(([iso, rec]) => (rec?.tod === "day" || rec?.tod === "night") && parseIsoKey(iso) > stop.date)
+      .sort((a, b) => parseIsoKey(a[0]) - parseIsoKey(b[0]))[0];
+    if (nextBleed) {
+      const bleedDate = parseIsoKey(nextBleed[0]);
+      const interval  = Math.round((bleedDate - stop.date) / 86400000);
+      return { interval, tod: nextBleed[1].tod };
+    }
+  }
+  return null;
+}
+
+/** מחשב את יום החשש לחודש הנוכחי: הפסקה אחרונה ללא ראייה + דפוס מחושב */
+function getCurrentPillConcernDate() {
+  if (!state.settings.pillsEnabled) return null;
+  const auto = calcPillsAuto();
+  if (!auto || auto.interval <= 0) return null;
+
+  const stopEntries = Object.entries(state.entries || {})
+    .filter(([, rec]) => rec?.pillStop)
+    .map(([iso]) => ({ iso, date: parseIsoKey(iso) }))
+    .filter(e => e.date)
+    .sort((a, b) => b.date - a.date);
+
+  for (const stop of stopEntries) {
+    const hasBleedAfter = Object.entries(state.entries || {}).some(([iso, rec]) =>
+      (rec?.tod === "day" || rec?.tod === "night") && parseIsoKey(iso) > stop.date
+    );
+    if (!hasBleedAfter) {
+      const concernDate = new Date(stop.date.getFullYear(), stop.date.getMonth(), stop.date.getDate() + auto.interval);
+      return { concernDate, tod: auto.tod, stopDate: stop.date };
+    }
+  }
+  return null;
+}
+
+function updatePillsIntervalDisplay() {
+  if (!els.pillsIntervalDisplay) return;
+  const auto    = calcPillsAuto();
+  const current = getCurrentPillConcernDate();
+  if (current) {
+    const todLabel = current.tod === "night" ? "לילה 🌙" : "יום ☀️";
+    const cd = current.concernDate;
+    els.pillsIntervalDisplay.innerHTML =
+      `דפוס: ${auto.interval} ימים מהפסקה לראייה — ${todLabel}<br>` +
+      `<strong>יום חשש: ${cd.getDate()}/${cd.getMonth()+1}/${cd.getFullYear()} — ${todLabel}</strong>`;
+  } else if (auto) {
+    const todLabel = auto.tod === "night" ? "לילה 🌙" : "יום ☀️";
+    els.pillsIntervalDisplay.textContent =
+      `דפוס מחושב: ${auto.interval} ימים — ${todLabel}. יש לסמן הפסקת גלולות נוכחית בלוח.`;
+  } else {
+    els.pillsIntervalDisplay.textContent =
+      "סמני בלוח את יום הפסקת הגלולות (💊) ואת יום הראייה — האפליקציה תחשב לבד.";
+  }
+}
+
+els.pillsToggle?.addEventListener("click", () => {
+  const newVal = els.pillsToggle.getAttribute("aria-checked") !== "true";
+  els.pillsToggle.setAttribute("aria-checked", String(newVal));
+  state.settings.pillsEnabled = newVal;
+  saveSettings(state.settings);
+  if (els.pillsFields) els.pillsFields.classList.toggle("settings-group--dimmed", !newVal);
+  renderMonth();
+});
+
 // ── מיתוג לשוניות ──
 document.querySelectorAll(".tab-btn[data-tab]").forEach(btn => {
   btn.addEventListener("click", () => {
@@ -2242,6 +2398,14 @@ if (els.hefsekMikvehToggle) {
   if (els.hefsekMikvehTimeRow) els.hefsekMikvehTimeRow.classList.toggle("settings-group--dimmed", !on);
 }
 if (els.hefsekMikvehTime) els.hefsekMikvehTime.value = state.settings.hefsekMikvehTime || "";
+
+// גלולות/התקן — סנכרון UI
+if (els.pillsToggle) {
+  const on = state.settings.pillsEnabled;
+  els.pillsToggle.setAttribute("aria-checked", String(on));
+  if (els.pillsFields) els.pillsFields.classList.toggle("settings-group--dimmed", !on);
+}
+updatePillsIntervalDisplay();
 
 // החל ערכת נושא שמורה
 applyTheme(state.settings.theme || "light");

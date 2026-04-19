@@ -128,6 +128,7 @@
           <button class="tab-btn" role="tab" data-tab="notif"   aria-selected="false">התראות</button>
           <button class="tab-btn" role="tab" data-tab="share"   aria-selected="false">שיתוף</button>
           <button class="tab-btn" role="tab" data-tab="hefsek"  aria-selected="false">הפסק טהרה</button>
+          <button class="tab-btn" role="tab" data-tab="pills"   aria-selected="false">גלולות/התקן</button>
           <button class="tab-btn" role="tab" data-tab="contact" aria-selected="false">צור קשר</button>
         </div>
 
@@ -412,6 +413,31 @@
                 <div class="setting-desc">ריק = לפי שקיעה (כברירת מחדל)</div>
               </div>
               <input id="hefsek-mikveh-time" class="input--text" type="time">
+            </div>
+
+          </div>
+
+          <!-- ══ לשונית: גלולות/התקן ══ -->
+          <div class="tab-pane" id="tab-pills" hidden>
+
+            <div class="setting-row">
+              <div class="setting-label">
+                <div class="setting-name">חישוב חשש לאחר הפסקת גלולות/התקן</div>
+                <div class="setting-desc">מסמנת ימי חשש נוספים מבוססי ההפסקה, בנפרד מחישובי הוסתות הרגילים</div>
+              </div>
+              <button id="pills-toggle" class="toggle-btn" role="switch" aria-checked="false" type="button" aria-label="הפעל חישוב גלולות">
+                <span class="toggle-btn__knob"></span>
+              </button>
+            </div>
+
+            <div id="pills-fields" class="settings-group--dimmed">
+              <div class="setting-row setting-row--sub">
+                <div class="setting-label">
+                  <div class="setting-name">איך להשתמש</div>
+                  <div class="setting-desc">לחצי על יום בלוח ובחרי "💊 הפסקת גלולות" לסימון יום ההפסקה. את הראייה רשמי כרגיל (יום/לילה). האפליקציה תחשב לבד את הפרש הימים ותסמן את יום החשש בחודש הבא.</div>
+                </div>
+              </div>
+              <div id="pills-interval-display" class="pills-auto-info"></div>
             </div>
 
           </div>
