@@ -2427,7 +2427,25 @@ if (els.citySelect && initLoc) {
 }
 
 if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.register("./service-worker.js").catch(() => {});
+  navigator.serviceWorker.register("./service-worker.js").then((reg) => {
+    reg.addEventListener("updatefound", () => {
+      const newSW = reg.installing;
+      newSW.addEventListener("statechange", () => {
+        if (newSW.state === "installed" && navigator.serviceWorker.controller) {
+          const banner = document.getElementById("update-banner");
+          const btn    = document.getElementById("update-btn");
+          if (banner) banner.hidden = false;
+          if (btn) btn.addEventListener("click", () => {
+            newSW.postMessage("skipWaiting");
+          });
+        }
+      });
+    });
+  }).catch(() => {});
+
+  navigator.serviceWorker.addEventListener("controllerchange", () => {
+    window.location.reload();
+  });
 }
 
 renderMonth();

@@ -1,9 +1,10 @@
-const CACHE = "monthly-calendar-v8";
+const CACHE = "monthly-calendar-v9";
 const APP_SHELL = ["./", "./index.html", "./style.css", "./app.js", "./manifest.json"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
-    caches.open(CACHE).then((c) => c.addAll(APP_SHELL)).then(() => self.skipWaiting())
+    caches.open(CACHE).then((c) => c.addAll(APP_SHELL))
+    // אין skipWaiting — ממתין לאישור המשתמש לפני החלפה
   );
 });
 
@@ -15,6 +16,12 @@ self.addEventListener("activate", (event) => {
   );
 });
 
+self.addEventListener("message", (event) => {
+  if (event.data === "skipWaiting") {
+    self.skipWaiting();
+  }
+});
+
 self.addEventListener("fetch", (event) => {
   const { request } = event;
   if (request.method !== "GET") return;
@@ -22,18 +29,18 @@ self.addEventListener("fetch", (event) => {
   const isSameOrigin = new URL(request.url).origin === self.location.origin;
 
   if (isSameOrigin) {
-    // Network-first לקבצי האפליקציה: תמיד מנסה לקבל גרסה עדכנית
+    // Cache-first: טוען מהמכשיר מיד, מרענן cache ברקע
     event.respondWith(
-      fetch(request)
-        .then((res) => {
-          const clone = res.clone();
-          caches.open(CACHE).then((c) => c.put(request, clone));
+      caches.match(request).then((cached) => {
+        const networkFetch = fetch(request).then((res) => {
+          caches.open(CACHE).then((c) => c.put(request, res.clone()));
           return res;
-        })
-        .catch(() => caches.match(request).then((r) => r || caches.match("./index.html") || Response.error()))
+        }).catch(() => {});
+        return cached || networkFetch;
+      })
     );
   } else {
-    // Cache-first לספריות CDN (נדירות לשינוי)
+    // Cache-first לספריות CDN
     event.respondWith(
       caches.match(request).then((cached) => {
         if (cached) return cached;
