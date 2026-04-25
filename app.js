@@ -1567,7 +1567,7 @@ function buildCell({ date, muted, today, marks }) {
         const statusText = rec.hefsek === "ok" ? "הפסק תקין ✦" : "הפסק נכשל ✗";
         const hOk   = rec.hefsek === "ok"   ? " popover__check-btn--active" : "";
         const hFail = rec.hefsek === "fail"  ? " popover__check-btn--active" : "";
-        extraHTML = `<div class="popover__hefsek-section"><div class="popover__hefsek-title">סטטוס: ${statusText}</div><div class="popover__check-row"><span class="popover__check-label">שנה ל:</span><button type="button" class="popover__check-btn popover__check-btn--ok${hOk}" data-hefsek="ok">✓ תקין</button><button type="button" class="popover__check-btn popover__check-btn--fail${hFail}" data-hefsek="fail">✗ ראיתי דם</button><button type="button" class="popover__check-btn popover__check-btn--del" data-hefsek-delete="1">מחק</button></div></div>`;
+        extraHTML = `<div class="popover__hefsek-section"><div class="popover__hefsek-title">סטטוס: ${statusText}</div><div class="popover__check-row"><span class="popover__check-label">שנה ל:</span><button type="button" class="popover__check-btn popover__check-btn--ok${hOk}" data-hefsek="ok">✓ תקין</button><button type="button" class="popover__check-btn popover__check-btn--fail${hFail}" data-hefsek="fail">✗ לא תקין</button><button type="button" class="popover__check-btn popover__check-btn--del" data-hefsek-delete="1">מחק</button></div></div>`;
       } else {
         // הצגת כפתור הפסק מהיום המחושב ואילך (לא לפניו)
         const vestList = getSortedEntries();
@@ -1582,7 +1582,7 @@ function buildCell({ date, muted, today, marks }) {
               return d && vestDate && d > vestDate;
             });
             if (!hasValidHefsek) {
-              extraHTML = `<div class="popover__hefsek-section"><div class="popover__check-row"><span class="popover__check-label">הפסק טהרה</span><button type="button" class="popover__check-btn popover__check-btn--ok" data-hefsek="ok">✓ תקין</button><button type="button" class="popover__check-btn popover__check-btn--fail" data-hefsek="fail">✗ ראיתי דם</button></div></div>`;
+              extraHTML = `<div class="popover__hefsek-section"><div class="popover__check-row"><span class="popover__check-label">הפסק טהרה</span><button type="button" class="popover__check-btn popover__check-btn--ok" data-hefsek="ok">✓ תקין</button><button type="button" class="popover__check-btn popover__check-btn--fail" data-hefsek="fail">✗ לא תקין</button></div></div>`;
             }
           }
         }

@@ -1,4 +1,4 @@
-const CACHE = "monthly-calendar-v7";
+const CACHE = "monthly-calendar-v8";
 const APP_SHELL = ["./", "./index.html", "./style.css", "./app.js", "./manifest.json"];
 
 self.addEventListener("install", (event) => {
