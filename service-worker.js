@@ -1,4 +1,4 @@
-const CACHE = "monthly-calendar-v9";
+const CACHE = "monthly-calendar-v10";
 const APP_SHELL = ["./", "./index.html", "./style.css", "./app.js", "./manifest.json"];
 
 self.addEventListener("install", (event) => {
@@ -26,7 +26,8 @@ self.addEventListener("fetch", (event) => {
   const { request } = event;
   if (request.method !== "GET") return;
 
-  const isSameOrigin = new URL(request.url).origin === self.location.origin;
+  let isSameOrigin = false;
+  try { isSameOrigin = new URL(request.url).origin === self.location.origin; } catch {}
 
   if (isSameOrigin) {
     // Cache-first: טוען מהמכשיר מיד, מרענן cache ברקע
@@ -35,7 +36,7 @@ self.addEventListener("fetch", (event) => {
         const networkFetch = fetch(request).then((res) => {
           caches.open(CACHE).then((c) => c.put(request, res.clone()));
           return res;
-        }).catch(() => {});
+        }).catch(() => Response.error());
         return cached || networkFetch;
       })
     );

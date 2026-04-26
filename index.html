@@ -302,6 +302,46 @@
                 <button id="notif-sound-file-btn" class="btn btn--small" type="button">בחר קובץ</button>
               </div>
 
+              <!-- חזרת צליל -->
+              <div class="setting-group-label">חזרת צליל</div>
+
+              <div class="setting-row setting-row--sub">
+                <div class="setting-label">
+                  <div class="setting-name">חזרי עד אישור</div>
+                  <div class="setting-desc">הצליל יחזור על עצמו עד לחיצה על "עצרי"</div>
+                </div>
+                <button id="notif-repeat-toggle" class="toggle-btn" role="switch" aria-checked="false" type="button" aria-label="הפעל חזרת צליל">
+                  <span class="toggle-btn__knob"></span>
+                </button>
+              </div>
+
+              <div id="notif-repeat-fields" class="settings-group--dimmed">
+                <div class="setting-row setting-row--sub">
+                  <div class="setting-label">
+                    <div class="setting-name">חזרה כל</div>
+                  </div>
+                  <select id="notif-repeat-sec" class="select select--small">
+                    <option value="30">30 שניות</option>
+                    <option value="60" selected>דקה</option>
+                    <option value="120">2 דקות</option>
+                    <option value="180">3 דקות</option>
+                    <option value="300">5 דקות</option>
+                  </select>
+                </div>
+                <div class="setting-row setting-row--sub">
+                  <div class="setting-label">
+                    <div class="setting-name">הפסקה אוטומטית אחרי</div>
+                  </div>
+                  <select id="notif-repeat-max" class="select select--small">
+                    <option value="2">2 דקות</option>
+                    <option value="5">5 דקות</option>
+                    <option value="10" selected>10 דקות</option>
+                    <option value="30">30 דקות</option>
+                    <option value="60">שעה</option>
+                  </select>
+                </div>
+              </div>
+
             </div>
           </div>
 
@@ -318,6 +358,27 @@
             <div id="qr-panel" class="qr-panel" hidden>
               <div id="qr-canvas" class="qr-canvas"></div>
               <div class="qr-url" id="qr-url-text"></div>
+            </div>
+
+            <div class="setting-group-label">ייצוא ליומן (ICS)</div>
+
+            <div class="setting-row">
+              <div class="setting-label">
+                <div class="setting-name">תזכורת ביומן</div>
+                <div class="setting-desc">מתי היומן יתריע לפני כל אירוע</div>
+              </div>
+              <select id="ics-alarm" class="select select--small">
+                <option value="none">ללא תזכורת</option>
+                <option value="morning" selected>בוקר יום האירוע (9:00)</option>
+                <option value="prev-morning">יום לפני (9:00)</option>
+                <option value="both">שתי תזכורות</option>
+              </select>
+            </div>
+
+            <div class="setting-row">
+              <div class="setting-label">
+                <div class="setting-desc">מייצא את כל ימי הפרישה, הפסק הטהרה וז׳ הנקיים ליומן Google / Apple / Outlook</div>
+              </div>
             </div>
 
           </div>
@@ -433,11 +494,25 @@
             <div id="pills-fields" class="settings-group--dimmed">
               <div class="setting-row setting-row--sub">
                 <div class="setting-label">
-                  <div class="setting-name">איך להשתמש</div>
-                  <div class="setting-desc">לחצי על יום בלוח ובחרי "💊 הפסקת גלולות" לסימון יום ההפסקה. את הראייה רשמי כרגיל (יום/לילה). האפליקציה תחשב לבד את הפרש הימים ותסמן את יום החשש בחודש הבא.</div>
+                  <div class="setting-name">הפרש ימים</div>
+                  <div class="setting-desc">כמה ימים מיום ההפסקה עד הראייה (ספירה כוללת — יום ההפסקה הוא יום 1)</div>
+                </div>
+                <input id="pills-interval" class="input--number" type="number" min="1" max="60" placeholder="למשל: 4">
+              </div>
+              <div class="setting-row setting-row--sub">
+                <div class="setting-label">
+                  <div class="setting-name">עונת הראייה</div>
+                </div>
+                <select id="pills-tod" class="select select--small">
+                  <option value="day">יום ☀️</option>
+                  <option value="night">לילה 🌙</option>
+                </select>
+              </div>
+              <div class="setting-row setting-row--sub">
+                <div class="setting-label">
+                  <div class="setting-desc">לחצי על יום ההפסקה בלוח ובחרי "💊 הפסקת גלולות" — המערכת תסמן אוטומטית את יום החשש.</div>
                 </div>
               </div>
-              <div id="pills-interval-display" class="pills-auto-info"></div>
             </div>
 
           </div>
@@ -480,6 +555,11 @@
     <div id="update-banner" hidden>
       <span>גרסה חדשה זמינה</span>
       <button id="update-btn" type="button">עדכן עכשיו</button>
+    </div>
+
+    <div id="notif-active-banner" role="alert" aria-live="assertive" hidden>
+      <span id="notif-active-text">🔔 תזכורת פעילה</span>
+      <button id="notif-active-dismiss" type="button">עצרי ✕</button>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/@hebcal/core@6.0.8/dist/bundle.min.js"></script>

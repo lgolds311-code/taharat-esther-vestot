@@ -9,6 +9,7 @@ const els = {
   prev:           document.querySelector("#prev-month"),
   next:           document.querySelector("#next-month"),
   exportIcs:        document.querySelector("#export-ics"),
+  icsAlarm:         document.querySelector("#ics-alarm"),
   clearAll:         document.querySelector("#clear-all"),
   exportBackup:     document.querySelector("#export-backup"),
   importBackupBtn:  document.querySelector("#import-backup-btn"),
@@ -54,9 +55,17 @@ const els = {
   notifSoundFile:       document.querySelector("#notif-sound-file"),
   notifSoundFileBtn:    document.querySelector("#notif-sound-file-btn"),
   notifSoundFileName:   document.querySelector("#notif-sound-file-name"),
-  pillsToggle:          document.querySelector("#pills-toggle"),
-  pillsFields:          document.querySelector("#pills-fields"),
-  pillsIntervalDisplay: document.querySelector("#pills-interval-display"),
+  notifActiveBanner:  document.querySelector("#notif-active-banner"),
+  notifActiveText:    document.querySelector("#notif-active-text"),
+  notifActiveDismiss: document.querySelector("#notif-active-dismiss"),
+  notifRepeatToggle:  document.querySelector("#notif-repeat-toggle"),
+  notifRepeatFields:  document.querySelector("#notif-repeat-fields"),
+  notifRepeatSec:     document.querySelector("#notif-repeat-sec"),
+  notifRepeatMax:     document.querySelector("#notif-repeat-max"),
+  pillsToggle:        document.querySelector("#pills-toggle"),
+  pillsFields:        document.querySelector("#pills-fields"),
+  pillsInterval:      document.querySelector("#pills-interval"),
+  pillsTod:           document.querySelector("#pills-tod"),
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -100,6 +109,7 @@ function parseIsoKey(key) {
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(key));
   if (!m) return null;
   const dt = new Date(+m[1], +m[2]-1, +m[3]);
+  if (dt.getMonth() !== +m[2]-1) return null;
   return Number.isFinite(dt.getTime()) ? dt : null;
 }
 
@@ -356,7 +366,10 @@ const DEFAULT_SETTINGS = {
   notif1Name: "", notif2Name: "",
   reminderStartMin: 0, reminderEndMin: 30,
   notif1FixedTime: "", notif2FixedTime: "",
-  notifSound: "default",
+  notifSound:       "default",
+  notifRepeat:      false,
+  notifRepeatSec:   60,
+  notifRepeatMaxMin: 10,
   // ── הפסק טהרה ──
   hefsekMinDay: 4,            // יום מינימלי להפסק (4/5/6/7)
   hefsekReminderMin: 30,      // דקות לפני שקיעה לתזכורת הפסק טהרה
@@ -367,8 +380,12 @@ const DEFAULT_SETTINGS = {
   hefsekEveningTime: "",      // שעה קבועה לבדיקת ערב (ריק = לפי דקות)
   hefsekMikvehReminder: true, // תזכורת טבילה ביום 7
   hefsekMikvehTime: "",       // שעה קבועה לתזכורת טבילה (ריק = לפי שקיעה)
+  // ── ייצוא ICS ──
+  icsAlarm: "morning",
   // ── גלולות/התקן ──
-  pillsEnabled: false,
+  pillsEnabled:  false,
+  pillsInterval: 4,
+  pillsTod:      "day",
 };
 
 function loadSettings() {
@@ -447,6 +464,39 @@ function playNotificationSound(type) {
   } catch {}
 }
 
+const notifEngine = { active: null }; // { id, intervalId, timeoutId }
+
+function stopRepeatSound() {
+  if (!notifEngine.active) return;
+  clearInterval(notifEngine.active.intervalId);
+  clearTimeout(notifEngine.active.timeoutId);
+  notifEngine.active = null;
+  if (els.notifActiveBanner) els.notifActiveBanner.hidden = true;
+}
+
+/** מנגן צליל ואם מופעל חזרה — חוזר עד לחיצת "עצרי" או עד גבול זמן */
+function startRepeatSound(type, id, title) {
+  if (notifEngine.active?.id === id) return;  // אותה התראה כבר פעילה
+  stopRepeatSound();
+  playNotificationSound(type);
+  if (!state.settings.notifRepeat) return;
+  const sec    = parseInt(state.settings.notifRepeatSec)    || 60;
+  const maxMin = parseInt(state.settings.notifRepeatMaxMin) || 10;
+  if (els.notifActiveBanner) {
+    els.notifActiveBanner.hidden = false;
+    if (els.notifActiveText) els.notifActiveText.textContent = `🔔 ${title || "תזכורת פעילה"}`;
+  }
+  const intervalId = setInterval(() => {
+    playNotificationSound(type);
+    navigator.vibrate?.([200, 100, 200]);
+  }, sec * 1000);
+  const timeoutId = setTimeout(stopRepeatSound, maxMin * 60 * 1000);
+  notifEngine.active = { id, intervalId, timeoutId };
+}
+
+document.addEventListener("visibilitychange", () => { if (document.hidden) stopRepeatSound(); });
+window.addEventListener("beforeunload", stopRepeatSound);
+
 /** בדיקת התראות יומית — מופעלת פעם אחת בעליית האפליקציה */
 function checkDailyNotifications() {
   // בדפדפנים שלא תומכים ב-Notifications — יציאה שקטה
@@ -485,7 +535,7 @@ function checkDailyNotifications() {
       // כשמנגנים צליל מותאם — מושתקים את צליל המערכת
       if (soundType !== "default") notifOpts.silent = true;
       new Notification(`טהרת אסתר — ${title}`, notifOpts);
-      playNotificationSound(soundType);
+      startRepeatSound(soundType, id, title);
       sentSet.add(id);
       saveSent();
     } catch {}
@@ -1315,22 +1365,26 @@ function computeMarks() {
   }
 
   // ══════════════════════════════════════════════════════════════
-  // פרישה מגלולות/התקן — חד-פעמי לפי תאריך הפסקה נוכחי
+  // פרישה מגלולות/התקן — לפי כל ימי הפסקה מסומנים בלוח
   // ══════════════════════════════════════════════════════════════
-  const pillConcern = getCurrentPillConcernDate();
-  if (pillConcern) {
-    const { concernDate, tod } = pillConcern;
-    const today = startOfDay(new Date());
-    if (concernDate >= today || isoKey(concernDate) === isoKey(today)) {
-      const todLabel = tod === "night" ? "לילה 🌙" : "יום ☀️";
+  if (state.settings.pillsEnabled) {
+    const interval = parseInt(state.settings.pillsInterval) || 0;
+    const todLabel = state.settings.pillsTod === "night" ? "לילה 🌙" : "יום ☀️";
+    const today    = startOfDay(new Date());
+    for (const [iso, rec] of Object.entries(state.entries || {})) {
+      if (!rec?.pillStop) continue;
+      const stopD = parseIsoKey(iso);
+      if (!stopD) continue;
+      mark(iso, "💊 הפסקת גלולות", "pill-stop");
+      if (interval <= 0) continue;
+      // ספירה כוללת: יום ההפסקה הוא יום 1, לכן מוסיפים (interval − 1)
+      const concernDate = new Date(stopD.getFullYear(), stopD.getMonth(), stopD.getDate() + interval - 1);
       const lbl = `פרישה מגלולות/התקן — ${todLabel}`;
       mark(isoKey(concernDate), lbl, "veset-pills");
-      sum += `\n\n◉ פרישה בגלל הפסקת גלולות/התקן:\n${lbl}: ${hebFullGem(concernDate)}`;
+      if (concernDate >= today) {
+        sum += `\n\n◉ פרישה בגלל הפסקת גלולות/התקן:\n${lbl}: ${hebFullGem(concernDate)}`;
+      }
     }
-  }
-  // סימון ימי הפסקת גלולות בלוח
-  for (const [iso, rec] of Object.entries(state.entries || {})) {
-    if (rec?.pillStop && state.settings.pillsEnabled) mark(iso, "💊 הפסקת גלולות", "pill-stop");
   }
 
   // ══════════════════════════════════════════════════════════════
@@ -1653,7 +1707,6 @@ function buildCell({ date, muted, today, marks }) {
           saveJson(STORAGE.entries, state.entries);
           closePopover();
           renderMonth();
-          updatePillsIntervalDisplay();
         });
       });
     };
@@ -1783,30 +1836,67 @@ function downloadText(name, text, mime="text/plain") {
   setTimeout(() => URL.revokeObjectURL(a.href), 5000);
 }
 
+const ICS_CAT_DESC = {
+  "veset":           "יום פרישה מחמת הוסת",
+  "veset-rare":      "יום פרישה — וסת נדיר (הפלגה/דילוג)",
+  "veset-pills":     "יום פרישה מחמת הפסקת גלולות/התקן",
+  "hefsek-eligible": "יום כשיר לביצוע הפסק טהרה",
+  "hefsek":          "הפסק טהרה",
+  "nekiim":          "שבעה נקיים",
+};
+
+function icsValarm(trigger, desc) {
+  return ["BEGIN:VALARM", `TRIGGER:${trigger}`, "ACTION:DISPLAY", `DESCRIPTION:${icsEsc(desc)}`, "END:VALARM"].join("\r\n");
+}
+
 function exportIcs() {
   if (!HDateCtor) { alert("הספרייה לתאריך עברי לא נטענה."); return; }
-  const { marks, summary } = computeMarks();
-  const dtstamp = toIcsUtc(new Date());
-  const events  = [];
+  const { marks } = computeMarks();
+  const dtstamp   = toIcsUtc(new Date());
+  const alarm     = state.settings.icsAlarm || "morning";
+  const events    = [];
+  const uidCount  = {}; // מונה לפי iso+cat למניעת UID כפול
+
   for (const [iso, labels] of Object.entries(marks)) {
     const dt = parseIsoKey(iso); if (!dt) continue;
-    for (const { label } of labels) {
+    for (const { label, cat } of labels) {
+      if (cat === "pill-stop") continue; // סימון ידני — לא אירוע מחושב
+      const summary   = `טהרת אסתר — ${label}`;
+      const desc      = ICS_CAT_DESC[cat] || label;
+      const uidKey    = `${iso}-${cat}`;
+      uidCount[uidKey] = (uidCount[uidKey] || 0) + 1;
+      const uid       = `${uidKey}-${uidCount[uidKey]}@taharat-esther`;
+      const alarmRows = [];
+      if (alarm === "morning"      || alarm === "both") alarmRows.push(icsValarm("PT9H",   summary));
+      if (alarm === "prev-morning" || alarm === "both") alarmRows.push(icsValarm("-PT15H", summary));
       events.push([
         "BEGIN:VEVENT",
-        `UID:${iso}-${label}-${Math.random().toString(16).slice(2)}@monthlycalendar.local`,
+        `UID:${uid}`,
         `DTSTAMP:${dtstamp}`,
-        `SUMMARY:${icsEsc(`תזכורת (${label})`)}`,
+        `SUMMARY:${icsEsc(summary)}`,
         `DTSTART;VALUE=DATE:${toIcsDate(dt)}`,
-        `DTEND;VALUE=DATE:${toIcsDate(new Date(dt.getFullYear(), dt.getMonth(), dt.getDate()+1))}`,
-        `DESCRIPTION:${icsEsc(summary)}`,
+        `DTEND;VALUE=DATE:${toIcsDate(new Date(dt.getFullYear(), dt.getMonth(), dt.getDate() + 1))}`,
+        `DESCRIPTION:${icsEsc(desc)}`,
+        `CATEGORIES:${icsEsc(cat)}`,
+        "SEQUENCE:0",
+        ...alarmRows,
         "END:VEVENT",
       ].join("\r\n"));
     }
   }
+
   if (!events.length) { alert("אין תאריכים מחושבים לייצוא."); return; }
-  downloadText("calendar-export.ics", [
-    "BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//MonthlyCalendar//HE//",
-    "CALSCALE:GREGORIAN","METHOD:PUBLISH",...events,"END:VCALENDAR","",
+  downloadText("taharat-esther.ics", [
+    "BEGIN:VCALENDAR",
+    "VERSION:2.0",
+    "PRODID:-//TaharatEsther//HE//",
+    "CALSCALE:GREGORIAN",
+    "METHOD:PUBLISH",
+    "X-WR-CALNAME:טהרת אסתר",
+    "X-WR-CALDESC:תזכורות מחושבות — ימי פרישה, הפסק טהרה, שבעה נקיים",
+    ...events,
+    "END:VCALENDAR",
+    "",
   ].join("\r\n"), "text/calendar;charset=utf-8");
 }
 
@@ -1874,6 +1964,10 @@ els.next.addEventListener("click", () => {
   state.viewHYear = n.year; state.viewHMonth = n.month; renderMonth();
 });
 els.exportIcs.addEventListener("click", exportIcs);
+els.icsAlarm?.addEventListener("change", (e) => {
+  state.settings.icsAlarm = e.target.value;
+  saveSettings(state.settings);
+});
 els.clearAll.addEventListener("click", clearAll);
 
 window.addEventListener("keydown", (e) => {
@@ -1913,6 +2007,8 @@ if (els.locateBtn) {
         if (els.citySelect) els.citySelect.value = "";
         els.locateBtn.disabled    = false;
         els.locateBtn.textContent = "📍 זהה מיקום";
+        renderMonth();
+        checkDailyNotifications();
       },
       () => {
         alert("לא הצלחנו לאתר מיקום. אנא אשרי גישה למיקום בדפדפן.");
@@ -2156,76 +2252,29 @@ els.hefsekMikvehTime?.addEventListener("change", (e) => {
   saveSettings(state.settings);
 });
 
+// ── חזרת צליל ──
+
+els.notifActiveDismiss?.addEventListener("click", stopRepeatSound);
+
+els.notifRepeatToggle?.addEventListener("click", () => {
+  const newVal = els.notifRepeatToggle.getAttribute("aria-checked") !== "true";
+  els.notifRepeatToggle.setAttribute("aria-checked", String(newVal));
+  state.settings.notifRepeat = newVal;
+  saveSettings(state.settings);
+  if (els.notifRepeatFields) els.notifRepeatFields.classList.toggle("settings-group--dimmed", !newVal);
+});
+
+els.notifRepeatSec?.addEventListener("change", (e) => {
+  state.settings.notifRepeatSec = parseInt(e.target.value) || 60;
+  saveSettings(state.settings);
+});
+
+els.notifRepeatMax?.addEventListener("change", (e) => {
+  state.settings.notifRepeatMaxMin = parseInt(e.target.value) || 10;
+  saveSettings(state.settings);
+});
+
 // ── הגדרות גלולות/התקן ──
-
-/**
- * מחפש בהיסטוריית הלוח: הפסקת גלולות + ראייה עוקבת → מחזיר { interval, tod }.
- * ה"הפסקה הקודמת" = הפסקת גלולות אחרונה שאחריה קיימת ראייה רשומה.
- * ה"הפסקה הנוכחית" = הפסקת גלולות אחרונה ללא ראייה עוקבת.
- */
-function calcPillsAuto() {
-  const stopEntries = Object.entries(state.entries || {})
-    .filter(([, rec]) => rec?.pillStop)
-    .map(([iso]) => ({ iso, date: parseIsoKey(iso) }))
-    .filter(e => e.date)
-    .sort((a, b) => b.date - a.date); // חדש לישן
-
-  for (const stop of stopEntries) {
-    const nextBleed = Object.entries(state.entries || {})
-      .filter(([iso, rec]) => (rec?.tod === "day" || rec?.tod === "night") && parseIsoKey(iso) > stop.date)
-      .sort((a, b) => parseIsoKey(a[0]) - parseIsoKey(b[0]))[0];
-    if (nextBleed) {
-      const bleedDate = parseIsoKey(nextBleed[0]);
-      const interval  = Math.round((bleedDate - stop.date) / 86400000);
-      return { interval, tod: nextBleed[1].tod };
-    }
-  }
-  return null;
-}
-
-/** מחשב את יום החשש לחודש הנוכחי: הפסקה אחרונה ללא ראייה + דפוס מחושב */
-function getCurrentPillConcernDate() {
-  if (!state.settings.pillsEnabled) return null;
-  const auto = calcPillsAuto();
-  if (!auto || auto.interval <= 0) return null;
-
-  const stopEntries = Object.entries(state.entries || {})
-    .filter(([, rec]) => rec?.pillStop)
-    .map(([iso]) => ({ iso, date: parseIsoKey(iso) }))
-    .filter(e => e.date)
-    .sort((a, b) => b.date - a.date);
-
-  for (const stop of stopEntries) {
-    const hasBleedAfter = Object.entries(state.entries || {}).some(([iso, rec]) =>
-      (rec?.tod === "day" || rec?.tod === "night") && parseIsoKey(iso) > stop.date
-    );
-    if (!hasBleedAfter) {
-      const concernDate = new Date(stop.date.getFullYear(), stop.date.getMonth(), stop.date.getDate() + auto.interval);
-      return { concernDate, tod: auto.tod, stopDate: stop.date };
-    }
-  }
-  return null;
-}
-
-function updatePillsIntervalDisplay() {
-  if (!els.pillsIntervalDisplay) return;
-  const auto    = calcPillsAuto();
-  const current = getCurrentPillConcernDate();
-  if (current) {
-    const todLabel = current.tod === "night" ? "לילה 🌙" : "יום ☀️";
-    const cd = current.concernDate;
-    els.pillsIntervalDisplay.innerHTML =
-      `דפוס: ${auto.interval} ימים מהפסקה לראייה — ${todLabel}<br>` +
-      `<strong>יום חשש: ${cd.getDate()}/${cd.getMonth()+1}/${cd.getFullYear()} — ${todLabel}</strong>`;
-  } else if (auto) {
-    const todLabel = auto.tod === "night" ? "לילה 🌙" : "יום ☀️";
-    els.pillsIntervalDisplay.textContent =
-      `דפוס מחושב: ${auto.interval} ימים — ${todLabel}. יש לסמן הפסקת גלולות נוכחית בלוח.`;
-  } else {
-    els.pillsIntervalDisplay.textContent =
-      "סמני בלוח את יום הפסקת הגלולות (💊) ואת יום הראייה — האפליקציה תחשב לבד.";
-  }
-}
 
 els.pillsToggle?.addEventListener("click", () => {
   const newVal = els.pillsToggle.getAttribute("aria-checked") !== "true";
@@ -2233,6 +2282,18 @@ els.pillsToggle?.addEventListener("click", () => {
   state.settings.pillsEnabled = newVal;
   saveSettings(state.settings);
   if (els.pillsFields) els.pillsFields.classList.toggle("settings-group--dimmed", !newVal);
+  renderMonth();
+});
+
+els.pillsInterval?.addEventListener("change", (e) => {
+  state.settings.pillsInterval = parseInt(e.target.value) || 0;
+  saveSettings(state.settings);
+  renderMonth();
+});
+
+els.pillsTod?.addEventListener("change", (e) => {
+  state.settings.pillsTod = e.target.value;
+  saveSettings(state.settings);
   renderMonth();
 });
 
@@ -2399,13 +2460,26 @@ if (els.hefsekMikvehToggle) {
 }
 if (els.hefsekMikvehTime) els.hefsekMikvehTime.value = state.settings.hefsekMikvehTime || "";
 
+// ICS — סנכרון UI
+if (els.icsAlarm) els.icsAlarm.value = state.settings.icsAlarm || "morning";
+
+// חזרת צליל — סנכרון UI
+if (els.notifRepeatToggle) {
+  const on = !!state.settings.notifRepeat;
+  els.notifRepeatToggle.setAttribute("aria-checked", String(on));
+  if (els.notifRepeatFields) els.notifRepeatFields.classList.toggle("settings-group--dimmed", !on);
+}
+if (els.notifRepeatSec) els.notifRepeatSec.value = state.settings.notifRepeatSec   || 60;
+if (els.notifRepeatMax) els.notifRepeatMax.value = state.settings.notifRepeatMaxMin || 10;
+
 // גלולות/התקן — סנכרון UI
 if (els.pillsToggle) {
   const on = state.settings.pillsEnabled;
   els.pillsToggle.setAttribute("aria-checked", String(on));
   if (els.pillsFields) els.pillsFields.classList.toggle("settings-group--dimmed", !on);
 }
-updatePillsIntervalDisplay();
+if (els.pillsInterval) els.pillsInterval.value = state.settings.pillsInterval ?? 4;
+if (els.pillsTod)      els.pillsTod.value      = state.settings.pillsTod      || "day";
 
 // החל ערכת נושא שמורה
 applyTheme(state.settings.theme || "light");
