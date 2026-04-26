@@ -31,10 +31,11 @@ self.addEventListener("fetch", (event) => {
 
   if (isSameOrigin) {
     // Cache-first: טוען מהמכשיר מיד, מרענן cache ברקע
+    const cacheMatch = caches.match(request);
     event.respondWith(
-      caches.match(request).then((cached) => {
+      cacheMatch.then((cached) => {
         const networkFetch = fetch(request).then((res) => {
-          caches.open(CACHE).then((c) => c.put(request, res.clone()));
+          event.waitUntil(caches.open(CACHE).then((c) => c.put(request, res.clone())));
           return res;
         }).catch(() => Response.error());
         return cached || networkFetch;

@@ -549,7 +549,14 @@ function checkDailyNotifications() {
     if (delay <= 0) {
       send(id, title, body);
     } else {
-      setTimeout(() => send(id, title, body), delay);
+      setTimeout(() => {
+        // בדיקה מחדש מ-localStorage — מונע כפילות אם checkDailyNotifications נקראה פעמיים
+        try {
+          const freshLog = JSON.parse(localStorage.getItem(STORAGE.lastNotification) || "{}");
+          if ((freshLog[todayKey] || []).includes(id)) return;
+        } catch {}
+        send(id, title, body);
+      }, delay);
     }
   };
 
@@ -2104,6 +2111,7 @@ els.notificationsToggle?.addEventListener("click", async () => {
     state.settings.notificationsEnabled = true;
     saveSettings(state.settings);
     if (els.notifSub) els.notifSub.classList.remove("settings-group--dimmed");
+    checkDailyNotifications();
     return;
   }
 
@@ -2121,6 +2129,7 @@ els.notificationsToggle?.addEventListener("click", async () => {
     state.settings.notificationsEnabled = true;
     saveSettings(state.settings);
     if (els.notifSub) els.notifSub.classList.remove("settings-group--dimmed");
+    checkDailyNotifications();
   } else {
     els.notificationsToggle.setAttribute("aria-checked", "false");
     state.settings.notificationsEnabled = false;
