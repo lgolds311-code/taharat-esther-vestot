@@ -382,7 +382,7 @@ const DEFAULT_SETTINGS = {
   hefsekMikvehTime: "",       // שעה קבועה לתזכורת טבילה (ריק = לפי שקיעה)
   // ── ייצוא ICS ──
   icsAlarm: "morning",
-  // ── גלולות/התקן ──
+  // ── גלולות ──
   pillsEnabled:  false,
   pillsInterval: 4,
   pillsTod:      "day",
@@ -1150,6 +1150,14 @@ function computeMarks() {
   const day31   = state.settings?.day31Enabled;
   const fullDay = state.settings?.fullDayEnabled;
 
+  // עונת הראייה הנוכחית — קובעת לאיזו עונה חוששים בכל הוסתות
+  const vesetTod    = current.tod || "day";
+  const vesetTodLbl = vesetTod === "night" ? "לילה 🌙" : "יום ☀️";
+  const ozTodLbl    = vesetTod === "day"   ? "לילה 🌙" : "יום ☀️";
+  // יום אור זרוע: העונה שלפני העונה הראשית
+  // ראתה ביום → אור זרוע = לילה שלפני (prevDay) | ראתה בלילה → אור זרוע = יום של אותו יום
+  const ozDay = (greg) => vesetTod === "night" ? greg : prevDay(greg);
+
   const currHd = new HDateCtor(current.date);
 
   const marks = {};
@@ -1160,9 +1168,10 @@ function computeMarks() {
 
   /** סימון יום פרישה + לילה מוקדם (אם fullDay) + אור זרוע (אם oz) */
   function markVesetDay(greg, label, ozLabel) {
-    if (fullDay) mark(isoKey(prevDay(greg)), label);
-    mark(isoKey(greg), label);
-    if (oz && ozLabel) mark(isoKey(prevDay(greg)), ozLabel);
+    const fullLabel = `${label} — ${vesetTodLbl}`;
+    if (fullDay) mark(isoKey(prevDay(greg)), fullLabel);
+    mark(isoKey(greg), fullLabel);
+    if (oz && ozLabel) mark(isoKey(ozDay(greg)), `${ozLabel} — ${ozTodLbl}`);
   }
 
   let sum = `רשומה אחרונה: ${hebFullGem(current.date)} — ${current.tod === "night" ? "לילה" : "יום"}`;
@@ -1187,16 +1196,16 @@ function computeMarks() {
       const lbl    = `וסת ה${typeName} הקבוע (${i}/3)`;
       const ozLbl  = oz && ozType !== "beinonit" ? `אור זרוע (${typeName} ${i}/3)` : null;
       markVesetDay(occGreg, lbl, ozLbl);
-      sum += `\n${lbl}: ${hebFullGem(occGreg)}`;
-      if (oz && ozLbl) sum += `\n${ozLbl}: ${hebFullGem(prevDay(occGreg))}`;
+      sum += `\n${lbl} — ${vesetTodLbl}: ${hebFullGem(occGreg)}`;
+      if (oz && ozLbl) sum += `\n${ozLbl} — ${ozTodLbl}: ${hebFullGem(ozDay(occGreg))}`;
     }
     // הפלגה > 30: עונה בינונית (ברירת מחדל: חומרה; ויש מקילים)
     if (!isMonth && fixed.interval > 30) {
       const rule1   = new HDateCtor(entries[0].date).add(29, "d");
       const ozBLbl  = oz ? "אור זרוע (בינונית)" : null;
       markVesetDay(rule1.greg(), "עונה בינונית", ozBLbl);
-      sum += `\nעונה בינונית: ${hebFullGem(rule1.greg())} (הפלגה מעל ל׳)`;
-      if (oz && ozBLbl) sum += `\n${ozBLbl}: ${hebFullGem(prevDay(rule1.greg()))}`;
+      sum += `\nעונה בינונית — ${vesetTodLbl}: ${hebFullGem(rule1.greg())} (הפלגה מעל ל׳)`;
+      if (oz && ozBLbl) sum += `\n${ozBLbl} — ${ozTodLbl}: ${hebFullGem(ozDay(rule1.greg()))}`;
     }
   }
 
@@ -1244,8 +1253,8 @@ function computeMarks() {
           const lbl     = `ב״י — הפלגה קבועה (${i}/3)`;
           const ozLbl   = oz && ozType !== "beinonit" ? `אור זרוע (ב״י ${i}/3)` : null;
           markVesetDay(occGreg, lbl, ozLbl);
-          sum += `\n  ${lbl}: ${hebFullGem(occGreg)}`;
-          if (oz && ozLbl) sum += `\n  ${ozLbl}: ${hebFullGem(prevDay(occGreg))}`;
+          sum += `\n  ${lbl} — ${vesetTodLbl}: ${hebFullGem(occGreg)}`;
+          if (oz && ozLbl) sum += `\n  ${ozLbl} — ${ozTodLbl}: ${hebFullGem(ozDay(occGreg))}`;
         }
       }
 
@@ -1257,8 +1266,8 @@ function computeMarks() {
           const lbl     = `רש״ל — הפלגה קבועה (${i}/3)`;
           const ozLbl   = oz && ozType !== "beinonit" ? `אור זרוע (רש״ל ${i}/3)` : null;
           markVesetDay(occGreg, lbl, ozLbl);
-          sum += `\n  ${lbl}: ${hebFullGem(occGreg)}`;
-          if (oz && ozLbl) sum += `\n  ${ozLbl}: ${hebFullGem(prevDay(occGreg))}`;
+          sum += `\n  ${lbl} — ${vesetTodLbl}: ${hebFullGem(occGreg)}`;
+          if (oz && ozLbl) sum += `\n  ${ozLbl} — ${ozTodLbl}: ${hebFullGem(ozDay(occGreg))}`;
         }
       }
     }
@@ -1270,8 +1279,8 @@ function computeMarks() {
     const rule2   = monthVesetForOffset(currHd, 1);
     const ozChLbl = oz && ozType !== "beinonit" ? "אור זרוע (חודש)" : null;
     markVesetDay(rule2.greg(), "וסת החודש", ozChLbl);
-    sum += `\nוסת החודש: ${hebFullGem(rule2.greg())}`;
-    if (oz && ozChLbl) sum += `\n${ozChLbl}: ${hebFullGem(prevDay(rule2.greg()))}`;
+    sum += `\nוסת החודש — ${vesetTodLbl}: ${hebFullGem(rule2.greg())}`;
+    if (oz && ozChLbl) sum += `\n${ozChLbl} — ${ozTodLbl}: ${hebFullGem(ozDay(rule2.greg()))}`;
 
     // וסת ההפלגה
     if (previous) {
@@ -1280,8 +1289,8 @@ function computeMarks() {
       const rule3    = currHd.add(interval - 1, "d");
       const ozHfLbl  = oz && ozType !== "beinonit" ? "אור זרוע (הפלגה)" : null;
       markVesetDay(rule3.greg(), "וסת ההפלגה", ozHfLbl);
-      sum += `\nוסת ההפלגה: ${interval} ימים → ${hebFullGem(rule3.greg())}`;
-      if (oz && ozHfLbl) sum += `\n${ozHfLbl}: ${hebFullGem(prevDay(rule3.greg()))}`;
+      sum += `\nוסת ההפלגה: ${interval} ימים → ${hebFullGem(rule3.greg())} — ${vesetTodLbl}`;
+      if (oz && ozHfLbl) sum += `\n${ozHfLbl} — ${ozTodLbl}: ${hebFullGem(ozDay(rule3.greg()))}`;
     }
     // ← אין עונה בינונית! הוסת הקבוע פוטר ממנה
 
@@ -1308,17 +1317,17 @@ function computeMarks() {
     markVesetDay(rule2.greg(), "וסת החודש", ozChLabel);
 
     // ── סיכום ──
-    sum += `\nעונה בינונית: ${hebFullGem(rule1.greg())}`;
+    sum += `\nעונה בינונית — ${vesetTodLbl}: ${hebFullGem(rule1.greg())}`;
     if (fullDay) sum += ` (+ לילה מוקדם: ${hebFullGem(prevDay(rule1.greg()))})`;
     if (day31) {
       const rule1_31 = currHd.add(30, "d");
-      sum += `\nחומרת יום ל״א: ${hebFullGem(rule1_31.greg())}`;
+      sum += `\nחומרת יום ל״א — ${vesetTodLbl}: ${hebFullGem(rule1_31.greg())}`;
       if (fullDay) sum += ` (+ לילה מוקדם: ${hebFullGem(prevDay(rule1_31.greg()))})`;
     }
-    sum += `\nוסת החודש: ${hebFullGem(rule2.greg())}`;
+    sum += `\nוסת החודש — ${vesetTodLbl}: ${hebFullGem(rule2.greg())}`;
     if (oz) {
-      sum += `\nאור זרוע (בינונית): ${hebFullGem(prevDay(rule1.greg()))}`;
-      if (ozType !== "beinonit") sum += `\nאור זרוע (חודש): ${hebFullGem(prevDay(rule2.greg()))}`;
+      sum += `\nאור זרוע (בינונית) — ${ozTodLbl}: ${hebFullGem(ozDay(rule1.greg()))}`;
+      if (ozType !== "beinonit") sum += `\nאור זרוע (חודש) — ${ozTodLbl}: ${hebFullGem(ozDay(rule2.greg()))}`;
     }
 
     // ── וסת ההפלגה ──
@@ -1329,9 +1338,9 @@ function computeMarks() {
       const ozHfLbl  = oz && ozType !== "beinonit" ? "אור זרוע (הפלגה)" : null;
       markVesetDay(rule3.greg(), "וסת ההפלגה", ozHfLbl);
       sum += `\nרשומה קודמת: ${hebFullGem(previous.date)} — ${previous.tod === "night" ? "לילה" : "יום"}`;
-      sum += `\nוסת ההפלגה: ${interval} ימים → ${hebFullGem(rule3.greg())}`;
+      sum += `\nוסת ההפלגה: ${interval} ימים → ${hebFullGem(rule3.greg())} — ${vesetTodLbl}`;
       if (fullDay) sum += ` (+ לילה מוקדם: ${hebFullGem(prevDay(rule3.greg()))})`;
-      if (oz && ozHfLbl) sum += `\nאור זרוע (הפלגה): ${hebFullGem(prevDay(rule3.greg()))}`;
+      if (oz && ozHfLbl) sum += `\nאור זרוע (הפלגה) — ${ozTodLbl}: ${hebFullGem(ozDay(rule3.greg()))}`;
     } else {
       sum += `\nוסת ההפלגה: הוסיפו גם רשומה קודמת כדי לחשב.`;
     }
@@ -1365,14 +1374,14 @@ function computeMarks() {
     } catch {}
 
     if (!nextGreg) continue;
-    const rLabel = `⁓ ${lbl}`;
+    const rLabel = `⁓ ${lbl} — ${vesetTodLbl}`;
     mark(isoKey(nextGreg), rLabel, "veset-rare");
     if (fullDay) mark(isoKey(prevDay(nextGreg)), rLabel, "veset-rare");
-    sum += `\n\n◈ ${lbl}: ${hebFullGem(nextGreg)}`;
+    sum += `\n\n◈ ${lbl} — ${vesetTodLbl}: ${hebFullGem(nextGreg)}`;
   }
 
   // ══════════════════════════════════════════════════════════════
-  // פרישה מגלולות/התקן — לפי כל ימי הפסקה מסומנים בלוח
+  // פרישה מגלולות — לפי כל ימי הפסקה מסומנים בלוח
   // ══════════════════════════════════════════════════════════════
   if (state.settings.pillsEnabled) {
     const interval = parseInt(state.settings.pillsInterval) || 0;
@@ -1386,10 +1395,10 @@ function computeMarks() {
       if (interval <= 0) continue;
       // ספירה כוללת: יום ההפסקה הוא יום 1, לכן מוסיפים (interval − 1)
       const concernDate = new Date(stopD.getFullYear(), stopD.getMonth(), stopD.getDate() + interval - 1);
-      const lbl = `פרישה מגלולות/התקן — ${todLabel}`;
+      const lbl = `פרישה מגלולות — ${todLabel}`;
       mark(isoKey(concernDate), lbl, "veset-pills");
       if (concernDate >= today) {
-        sum += `\n\n◉ פרישה בגלל הפסקת גלולות/התקן:\n${lbl}: ${hebFullGem(concernDate)}`;
+        sum += `\n\n◉ פרישה בגלל הפסקת גלולות:\n${lbl}: ${hebFullGem(concernDate)}`;
       }
     }
   }
@@ -1650,12 +1659,12 @@ function buildCell({ date, muted, today, marks }) {
       }
     }
 
-    // ── מקטע הפסקת גלולות/התקן ──
+    // ── מקטע הפסקת גלולות ──
     let pillsHTML = "";
     if (state.settings.pillsEnabled) {
       const rec = state.entries[key] || {};
       const isStop = !!rec.pillStop;
-      pillsHTML = `<div class="popover__pills-section"><span class="popover__check-label">💊 הפסקת גלולות/התקן</span><button type="button" class="popover__check-btn${isStop ? " popover__check-btn--active" : ""}" data-pill-stop="1">${isStop ? "✓ מסומן" : "סמן"}</button></div>`;
+      pillsHTML = `<div class="popover__pills-section"><span class="popover__check-label">💊 הפסקת גלולות</span><button type="button" class="popover__check-btn${isStop ? " popover__check-btn--active" : ""}" data-pill-stop="1">${isStop ? "✓ מסומן" : "סמן"}</button></div>`;
     }
 
     // פונקציית חיבור אירועים לכפתורי הפסק/בדיקות
@@ -1846,7 +1855,7 @@ function downloadText(name, text, mime="text/plain") {
 const ICS_CAT_DESC = {
   "veset":           "יום פרישה מחמת הוסת",
   "veset-rare":      "יום פרישה — וסת נדיר (הפלגה/דילוג)",
-  "veset-pills":     "יום פרישה מחמת הפסקת גלולות/התקן",
+  "veset-pills":     "יום פרישה מחמת הפסקת גלולות",
   "hefsek-eligible": "יום כשיר לביצוע הפסק טהרה",
   "hefsek":          "הפסק טהרה",
   "nekiim":          "שבעה נקיים",
@@ -2283,7 +2292,7 @@ els.notifRepeatMax?.addEventListener("change", (e) => {
   saveSettings(state.settings);
 });
 
-// ── הגדרות גלולות/התקן ──
+// ── הגדרות גלולות ──
 
 els.pillsToggle?.addEventListener("click", () => {
   const newVal = els.pillsToggle.getAttribute("aria-checked") !== "true";
@@ -2481,7 +2490,7 @@ if (els.notifRepeatToggle) {
 if (els.notifRepeatSec) els.notifRepeatSec.value = state.settings.notifRepeatSec   || 60;
 if (els.notifRepeatMax) els.notifRepeatMax.value = state.settings.notifRepeatMaxMin || 10;
 
-// גלולות/התקן — סנכרון UI
+// גלולות — סנכרון UI
 if (els.pillsToggle) {
   const on = state.settings.pillsEnabled;
   els.pillsToggle.setAttribute("aria-checked", String(on));
