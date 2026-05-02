@@ -1155,8 +1155,9 @@ function computeMarks() {
   const vesetTodLbl = vesetTod === "night" ? "לילה 🌙" : "יום ☀️";
   const ozTodLbl    = vesetTod === "day"   ? "לילה 🌙" : "יום ☀️";
   // יום אור זרוע: העונה שלפני העונה הראשית
-  // ראתה ביום → אור זרוע = לילה שלפני (prevDay) | ראתה בלילה → אור זרוע = יום של אותו יום
-  const ozDay = (greg) => vesetTod === "night" ? greg : prevDay(greg);
+  // ראתה ביום → אור זרוע = לילה שפותח את אותו תאריך (לוח מתחיל מלילה) = אותו תאריך
+  // ראתה בלילה → אור זרוע = יום שלפני = תאריך קודם
+  const ozDay = (greg) => vesetTod === "night" ? prevDay(greg) : greg;
 
   const currHd = new HDateCtor(current.date);
 
@@ -1288,7 +1289,7 @@ function computeMarks() {
       const interval = Math.abs(currHd.abs() - prevHd.abs()) + 1;
       const rule3    = currHd.add(interval - 1, "d");
       const ozHfLbl  = oz && ozType !== "beinonit" ? "אור זרוע (הפלגה)" : null;
-      markVesetDay(rule3.greg(), "וסת ההפלגה", ozHfLbl);
+      markVesetDay(rule3.greg(), `וסת ההפלגה (${interval} ימים)`, ozHfLbl);
       sum += `\nוסת ההפלגה: ${interval} ימים → ${hebFullGem(rule3.greg())} — ${vesetTodLbl}`;
       if (oz && ozHfLbl) sum += `\n${ozHfLbl} — ${ozTodLbl}: ${hebFullGem(ozDay(rule3.greg()))}`;
     }
@@ -1336,7 +1337,7 @@ function computeMarks() {
       const interval = Math.abs(currHd.abs() - prevHd.abs()) + 1;
       const rule3    = currHd.add(Math.max(0, interval - 1), "d");
       const ozHfLbl  = oz && ozType !== "beinonit" ? "אור זרוע (הפלגה)" : null;
-      markVesetDay(rule3.greg(), "וסת ההפלגה", ozHfLbl);
+      markVesetDay(rule3.greg(), `וסת ההפלגה (${interval} ימים)`, ozHfLbl);
       sum += `\nרשומה קודמת: ${hebFullGem(previous.date)} — ${previous.tod === "night" ? "לילה" : "יום"}`;
       sum += `\nוסת ההפלגה: ${interval} ימים → ${hebFullGem(rule3.greg())} — ${vesetTodLbl}`;
       if (fullDay) sum += ` (+ לילה מוקדם: ${hebFullGem(prevDay(rule3.greg()))})`;
