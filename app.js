@@ -1343,7 +1343,9 @@ function computeMarks() {
       if (fullDay) sum += ` (+ לילה מוקדם: ${hebFullGem(prevDay(rule3.greg()))})`;
       if (oz && ozHfLbl) sum += `\nאור זרוע (הפלגה) — ${ozTodLbl}: ${hebFullGem(ozDay(rule3.greg()))}`;
 
-      // מחלוקת ב״י/רש״ל/ט״ז בהפלגה שפוספסה — גם כשאין וסת קבוע
+      // מחלוקת ב״י/רש״ל/ט״ז — ראיה שלישית לפני תאריך ההפלגה
+      // ב״י ורש״ל סופרים את אותו מרחק (ההפלגה הנוכחית), רק נקודת המוצא שונה:
+      // ב״י: מתאריך ההפלגה המקורית; רש״ל: מתאריך הראיה בפועל (= rule3, כבר מחושב)
       const method = state.settings?.fixedHaflagahMethod || "beit_yosef";
       if (entries.length >= 3) {
         const older = entries[2];
@@ -1351,24 +1353,22 @@ function computeMarks() {
         const prevInterval = Math.abs(prevHd.abs() - olderHd.abs()) + 1;
         const expectedGreg = prevHd.add(Math.max(0, prevInterval - 1), "d").greg();
 
-        // רק אם אכן עבר זמן ההפלגה הקודמת בלי ראיה, ואז ראתה מאוחר יותר
-        if (currHd.abs() > new HDateCtor(expectedGreg).abs()) {
+        // ראתה לפני תאריך ההפלגה המקורית — כאן נחלקו הפוסקים
+        if (currHd.abs() < new HDateCtor(expectedGreg).abs()) {
           if (method === "beit_yosef" || method === "taz") {
-            const byNext = new HDateCtor(expectedGreg).add(Math.max(0, prevInterval - 1), "d").greg();
-            const byLbl = `ב״י — הפלגה שפוספסה (${prevInterval} ימים)`;
-            const byOzLbl = oz && ozType !== "beinonit" ? "אור זרוע (ב״י הפלגה שפוספסה)" : null;
+            const byNext = new HDateCtor(expectedGreg).add(Math.max(0, interval - 1), "d").greg();
+            const byLbl = `ב״י — ${interval} ימים מתאריך ההפלגה המקורית`;
+            const byOzLbl = oz && ozType !== "beinonit" ? `אור זרוע (ב״י — הפלגה מקורית)` : null;
             markVesetDay(byNext, byLbl, byOzLbl);
-            sum += `\nב״י (הפלגה שפוספסה): ${prevInterval} ימים מיום שהיה אמור (${hebFullGem(expectedGreg)}) → ${hebFullGem(byNext)}`;
+            sum += `\nמחלוקת ב״י/רש״ל/ט״ז (ראיה לפני תאריך ההפלגה):`;
+            sum += `\n  ב״י: ${interval} ימים מ${hebFullGem(expectedGreg)} (תאריך ההפלגה המקורית) → ${hebFullGem(byNext)}`;
+            sum += `\n  רש״ל: ${interval} ימים מ${hebFullGem(current.date)} (תאריך הראיה) → ${hebFullGem(rule3.greg())} (= וסת ההפלגה הרגיל)`;
+            if (method === "taz") sum += `\n  ט״ז: חוששת לשתי הדעות`;
             if (oz && byOzLbl) sum += `\n${byOzLbl} — ${ozTodLbl}: ${hebFullGem(ozDay(byNext))}`;
-          }
-
-          if (method === "rashal" || method === "taz") {
-            const rshlNext = currHd.add(Math.max(0, prevInterval - 1), "d").greg();
-            const rshlLbl = `רש״ל — הפלגה שפוספסה (${prevInterval} ימים)`;
-            const rshlOzLbl = oz && ozType !== "beinonit" ? "אור זרוע (רש״ל הפלגה שפוספסה)" : null;
-            markVesetDay(rshlNext, rshlLbl, rshlOzLbl);
-            sum += `\nרש״ל (הפלגה שפוספסה): ${prevInterval} ימים מיום הראיה (${hebFullGem(current.date)}) → ${hebFullGem(rshlNext)}`;
-            if (oz && rshlOzLbl) sum += `\n${rshlOzLbl} — ${ozTodLbl}: ${hebFullGem(ozDay(rshlNext))}`;
+          } else {
+            // רש״ל בלבד — rule3 כבר מחושב, רק מוסיפים הסבר
+            sum += `\nמחלוקת ב״י/רש״ל/ט״ז (ראיה לפני תאריך ההפלגה):`;
+            sum += `\n  רש״ל: ${interval} ימים מ${hebFullGem(current.date)} → ${hebFullGem(rule3.greg())} (= וסת ההפלגה הרגיל)`;
           }
         }
       }
