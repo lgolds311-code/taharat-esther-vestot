@@ -1342,6 +1342,36 @@ function computeMarks() {
       sum += `\nוסת ההפלגה: ${interval} ימים → ${hebFullGem(rule3.greg())} — ${vesetTodLbl}`;
       if (fullDay) sum += ` (+ לילה מוקדם: ${hebFullGem(prevDay(rule3.greg()))})`;
       if (oz && ozHfLbl) sum += `\nאור זרוע (הפלגה) — ${ozTodLbl}: ${hebFullGem(ozDay(rule3.greg()))}`;
+
+      // מחלוקת ב״י/רש״ל/ט״ז בהפלגה שפוספסה — גם כשאין וסת קבוע
+      const method = state.settings?.fixedHaflagahMethod || "beit_yosef";
+      if (entries.length >= 3) {
+        const older = entries[2];
+        const olderHd = new HDateCtor(older.date);
+        const prevInterval = Math.abs(prevHd.abs() - olderHd.abs()) + 1;
+        const expectedGreg = prevHd.add(Math.max(0, prevInterval - 1), "d").greg();
+
+        // רק אם אכן עבר זמן ההפלגה הקודמת בלי ראיה, ואז ראתה מאוחר יותר
+        if (currHd.abs() > new HDateCtor(expectedGreg).abs()) {
+          if (method === "beit_yosef" || method === "taz") {
+            const byNext = new HDateCtor(expectedGreg).add(Math.max(0, prevInterval - 1), "d").greg();
+            const byLbl = `ב״י — הפלגה שפוספסה (${prevInterval} ימים)`;
+            const byOzLbl = oz && ozType !== "beinonit" ? "אור זרוע (ב״י הפלגה שפוספסה)" : null;
+            markVesetDay(byNext, byLbl, byOzLbl);
+            sum += `\nב״י (הפלגה שפוספסה): ${prevInterval} ימים מיום שהיה אמור (${hebFullGem(expectedGreg)}) → ${hebFullGem(byNext)}`;
+            if (oz && byOzLbl) sum += `\n${byOzLbl} — ${ozTodLbl}: ${hebFullGem(ozDay(byNext))}`;
+          }
+
+          if (method === "rashal" || method === "taz") {
+            const rshlNext = currHd.add(Math.max(0, prevInterval - 1), "d").greg();
+            const rshlLbl = `רש״ל — הפלגה שפוספסה (${prevInterval} ימים)`;
+            const rshlOzLbl = oz && ozType !== "beinonit" ? "אור זרוע (רש״ל הפלגה שפוספסה)" : null;
+            markVesetDay(rshlNext, rshlLbl, rshlOzLbl);
+            sum += `\nרש״ל (הפלגה שפוספסה): ${prevInterval} ימים מיום הראיה (${hebFullGem(current.date)}) → ${hebFullGem(rshlNext)}`;
+            if (oz && rshlOzLbl) sum += `\n${rshlOzLbl} — ${ozTodLbl}: ${hebFullGem(ozDay(rshlNext))}`;
+          }
+        }
+      }
     } else {
       sum += `\nוסת ההפלגה: הוסיפו גם רשומה קודמת כדי לחשב.`;
     }
