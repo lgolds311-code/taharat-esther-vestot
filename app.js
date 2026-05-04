@@ -1351,17 +1351,20 @@ function computeMarks() {
         const older = entries[2];
         const olderHd = new HDateCtor(older.date);
         const prevInterval = Math.abs(prevHd.abs() - olderHd.abs()) + 1;
-        const expectedGreg = prevHd.add(Math.max(0, prevInterval - 1), "d").greg();
+        // expectedHd: תאריך ההפלגה שהיה אמור להגיע (לפי ההפלגה הקודמת)
+        const expectedHd   = prevHd.add(Math.max(0, prevInterval - 1), "d");
 
         // ראתה לפני תאריך ההפלגה המקורית — כאן נחלקו הפוסקים
-        if (currHd.abs() < new HDateCtor(expectedGreg).abs()) {
+        // השוואה ישירה ב-HDate ללא round-trip דרך Greg (מונע בעיות timezone)
+        if (currHd.abs() < expectedHd.abs()) {
           if (method === "beit_yosef" || method === "taz") {
-            const byNext = new HDateCtor(expectedGreg).add(Math.max(0, interval - 1), "d").greg();
-            const byLbl = `ב״י — ${interval} ימים מתאריך ההפלגה המקורית`;
-            const byOzLbl = oz && ozType !== "beinonit" ? `אור זרוע (ב״י — הפלגה מקורית)` : null;
+            const byNextHd = expectedHd.add(Math.max(0, interval - 1), "d");
+            const byNext   = byNextHd.greg();
+            const byLbl    = `ב״י — ${interval} ימים מתאריך ההפלגה המקורית`;
+            const byOzLbl  = oz && ozType !== "beinonit" ? `אור זרוע (ב״י — הפלגה מקורית)` : null;
             markVesetDay(byNext, byLbl, byOzLbl);
             sum += `\nמחלוקת ב״י/רש״ל/ט״ז (ראיה לפני תאריך ההפלגה):`;
-            sum += `\n  ב״י: ${interval} ימים מ${hebFullGem(expectedGreg)} (תאריך ההפלגה המקורית) → ${hebFullGem(byNext)}`;
+            sum += `\n  ב״י: ${interval} ימים מ${hebFullGem(expectedHd.greg())} (תאריך ההפלגה המקורית) → ${hebFullGem(byNext)}`;
             sum += `\n  רש״ל: ${interval} ימים מ${hebFullGem(current.date)} (תאריך הראיה) → ${hebFullGem(rule3.greg())} (= וסת ההפלגה הרגיל)`;
             if (method === "taz") sum += `\n  ט״ז: חוששת לשתי הדעות`;
             if (oz && byOzLbl) sum += `\n${byOzLbl} — ${ozTodLbl}: ${hebFullGem(ozDay(byNext))}`;
