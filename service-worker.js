@@ -5,7 +5,6 @@ self.addEventListener("install", (event) => {
   event.waitUntil(
     caches.open(CACHE).then((c) => c.addAll(APP_SHELL))
   );
-  self.skipWaiting();
 });
 
 self.addEventListener("activate", (event) => {
