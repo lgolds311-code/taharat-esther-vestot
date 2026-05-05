@@ -4,8 +4,8 @@ const APP_SHELL = ["./", "./index.html", "./style.css", "./app.js", "./manifest.
 self.addEventListener("install", (event) => {
   event.waitUntil(
     caches.open(CACHE).then((c) => c.addAll(APP_SHELL))
-    // אין skipWaiting — ממתין לאישור המשתמש לפני החלפה
   );
+  self.skipWaiting();
 });
 
 self.addEventListener("activate", (event) => {
