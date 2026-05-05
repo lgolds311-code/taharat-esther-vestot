@@ -880,20 +880,14 @@ input[type="time"] {
 /* ── לשוניות ── */
 .modal__tabs {
   display: flex;
+  flex-wrap: wrap;
   gap: 2px;
   padding: 8px 14px 0;
-  overflow-x: auto;
   flex-shrink: 0;
   border-bottom: 1px solid rgba(217, 70, 239, 0.14);
-  scrollbar-width: thin;
-  scrollbar-color: rgba(217,70,239,0.35) transparent;
 }
-.modal__tabs::-webkit-scrollbar { height: 3px; }
-.modal__tabs::-webkit-scrollbar-track { background: transparent; }
-.modal__tabs::-webkit-scrollbar-thumb { background: rgba(217,70,239,0.35); border-radius: 3px; }
 
 .tab-btn {
-  flex-shrink: 0;
   padding: 7px 13px 9px;
   border: none;
   border-bottom: 2px solid transparent;
