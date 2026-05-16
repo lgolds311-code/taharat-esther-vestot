@@ -1669,7 +1669,12 @@ function buildCell({ date, muted, today, marks }) {
       const mFail = rec.checkMorning === "fail"  ? " popover__check-btn--active" : "";
       const eOk   = rec.checkEvening === "ok"    ? " popover__check-btn--active" : "";
       const eFail = rec.checkEvening === "fail"  ? " popover__check-btn--active" : "";
-      extraHTML = `<div class="popover__hefsek-section"><div class="popover__hefsek-title">יום ${nekiimDay} בשבעה נקיים</div><div class="popover__check-row"><span class="popover__check-label">בדיקת בוקר</span><button type="button" class="popover__check-btn popover__check-btn--ok${mOk}" data-check="morning" data-val="ok">✓</button><button type="button" class="popover__check-btn popover__check-btn--fail${mFail}" data-check="morning" data-val="fail">✗</button></div><div class="popover__check-row"><span class="popover__check-label">בדיקת ערב</span><button type="button" class="popover__check-btn popover__check-btn--ok${eOk}" data-check="evening" data-val="ok">✓</button><button type="button" class="popover__check-btn popover__check-btn--fail${eFail}" data-check="evening" data-val="fail">✗</button></div></div>`;
+      const hasFail0 = rec.checkMorning === "fail" || rec.checkEvening === "fail";
+      const restartDone = !!rec.hefsek;
+      const restartStyle = hasFail0 ? "" : " style=\"display:none\"";
+      const restartActive = restartDone ? " popover__check-btn--active" : "";
+      const restartLabel = restartDone ? "✓ הפסק בוצע" : "בצע הפסק טהרה היום";
+      extraHTML = `<div class="popover__hefsek-section"><div class="popover__hefsek-title">יום ${nekiimDay} בשבעה נקיים</div><div class="popover__check-row"><span class="popover__check-label">בדיקת בוקר</span><button type="button" class="popover__check-btn popover__check-btn--ok${mOk}" data-check="morning" data-val="ok">✓</button><button type="button" class="popover__check-btn popover__check-btn--fail${mFail}" data-check="morning" data-val="fail">✗</button></div><div class="popover__check-row"><span class="popover__check-label">בדיקת ערב</span><button type="button" class="popover__check-btn popover__check-btn--ok${eOk}" data-check="evening" data-val="ok">✓</button><button type="button" class="popover__check-btn popover__check-btn--fail${eFail}" data-check="evening" data-val="fail">✗</button></div><div class="popover__hefsek-restart-section"${restartStyle}><div class="popover__check-row"><span class="popover__check-label">הבדיקה לא תקינה —</span><button type="button" class="popover__check-btn${restartActive}" data-hefsek-restart="1">${restartLabel}</button></div></div></div>`;
     } else {
       const rec = state.entries[key] || {};
       if (rec.hefsek) {
@@ -1726,6 +1731,20 @@ function buildCell({ date, muted, today, marks }) {
           const row = btn.closest(".popover__check-row");
           row.querySelectorAll(".popover__check-btn").forEach(b => b.classList.remove("popover__check-btn--active"));
           if (state.entries[key][field]) btn.classList.add("popover__check-btn--active");
+          // הצג/הסתר את מקטע הפסק הטהרה לפי מצב הבדיקות
+          const hasFail = state.entries[key]?.checkMorning === "fail" || state.entries[key]?.checkEvening === "fail";
+          const restartSection = els.popoverBody.querySelector(".popover__hefsek-restart-section");
+          if (restartSection) restartSection.style.display = hasFail ? "" : "none";
+          renderMonth();
+        });
+      });
+      els.popoverBody.querySelectorAll("[data-hefsek-restart]").forEach(btn => {
+        btn.addEventListener("click", () => {
+          if (!state.entries[key]) state.entries[key] = { updatedAt: Date.now() };
+          state.entries[key].hefsek    = "ok";
+          state.entries[key].updatedAt = Date.now();
+          saveJson(STORAGE.entries, state.entries);
+          closePopover();
           renderMonth();
         });
       });
