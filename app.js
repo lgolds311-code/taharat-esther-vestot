@@ -1138,6 +1138,57 @@ function detectRareVesetPatterns(entries, settings) {
 
   } catch {}
 
+  // ── 5. וסת החודש בדילוג חוזר חלילה ──
+  // מחזוריות של K חודשים (K=2 או K=3), חוזרת 3 פעמים = 3K ראיות עוקבות
+  // לאחר קביעה: חוששת ל-K מועדים הבאים (מחזור רביעי)
+  for (const cycleLen of [2, 3]) {
+    const needed = 3 * cycleLen;
+    if (entries.length < needed) continue;
+    try {
+      const recent    = entries.slice(0, needed);        // newest-first
+      const oldToNew  = [...recent].reverse();           // oldest-first
+
+      // כל הראיות באותה עונה
+      const refTod = oldToNew[0].tod;
+      if (oldToNew.some(e => e.tod !== refTod)) continue;
+
+      // חודשים עוקבים: הפרש חודש אחד בין כל שתיים
+      const hDates = oldToNew.map(e => new HDateCtor(e.date));
+      let consecutive = true;
+      for (let i = 0; i < needed - 1; i++) {
+        if (hebMonthsApart(hDates[i], hDates[i + 1]) !== 1) { consecutive = false; break; }
+      }
+      if (!consecutive) continue;
+
+      const hDays = hDates.map(hd => hd.getDate());
+
+      // אימות חזרת הדפוס: מחזורים 2 ו-3 זהים למחזור 1
+      let patternOk = true;
+      for (let c = 1; c < 3; c++) {
+        for (let k = 0; k < cycleLen; k++) {
+          if (hDays[c * cycleLen + k] !== hDays[k]) { patternOk = false; break; }
+        }
+        if (!patternOk) break;
+      }
+      if (!patternOk) continue;
+
+      // בניית K מועדים צפויים (מחזור הבא)
+      const lastHD  = hDates[needed - 1];
+      const nextHds = [];
+      for (let k = 0; k < cycleLen; k++) {
+        const targetDay  = hDays[k];
+        const nextMInfo  = addHebMonths(lastHD.getFullYear(), lastHD.getMonth(), k + 1);
+        const maxDay     = getHebDaysInMonth(nextMInfo.year, nextMInfo.month);
+        if (targetDay >= 1 && targetDay <= maxDay) {
+          nextHds.push(new HDateCtor(targetDay, nextMInfo.month, nextMInfo.year));
+        }
+      }
+      if (nextHds.length > 0) {
+        results.push({ type: "cyclic_dilug", cycleLen, pattern: hDays.slice(0, cycleLen), nextHd: nextHds[0], nextHds });
+      }
+    } catch {}
+  }
+
   return results;
 }
 
@@ -1590,6 +1641,11 @@ function computeMarks() {
         case "sirug":
           lbl = `וסת הסירוג (${numToGem(p.hDay)} לחודש, כל חודשיים)`;
           break;
+        case "cyclic_dilug": {
+          const patStr = p.pattern.map(d => numToGem(d)).join(", ");
+          lbl = `וסת החודש בדילוג חוזר חלילה (${patStr})`;
+          break;
+        }
       }
     } catch {}
 
