@@ -75,6 +75,7 @@ const els = {
   historyClose:       document.querySelector("#history-close"),
   historyTbody:       document.querySelector("#history-tbody"),
   historyEmpty:       document.querySelector("#history-empty"),
+  historyHaflagot:    document.querySelector("#history-haflagot"),
   annualBtn:          document.querySelector("#annual-btn"),
   annualModal:        document.querySelector("#annual-modal"),
   annualBackdrop:     document.querySelector("#annual-backdrop"),
@@ -2340,13 +2341,14 @@ document.querySelector("#settings-backdrop")?.addEventListener("click", closeSet
 // ── היסטוריית ראיות (modal) ──
 function openHistory() {
   if (!els.historyModal) return;
-  const entries = getSortedEntries().slice(0, 12);
+  const entries = getSortedEntries().slice(0, 13); // 13 כדי לקבל עד 12 הפלגות
   els.historyTbody.innerHTML = "";
   if (!entries.length) {
     els.historyEmpty.hidden = false;
+    if (els.historyHaflagot) els.historyHaflagot.hidden = true;
   } else {
     els.historyEmpty.hidden = true;
-    for (const e of entries) {
+    for (const e of entries.slice(0, 12)) {
       try {
         const hd  = new HDateCtor(e.date);
         const row = document.createElement("tr");
@@ -2361,6 +2363,69 @@ function openHistory() {
         row.appendChild(tdTod);
         els.historyTbody.appendChild(row);
       } catch {}
+    }
+
+    // ── פס הפלגות ("ימים שנבוכה בהם") ──
+    if (els.historyHaflagot && HDateCtor) {
+      const intervals = [];
+      for (let i = 0; i < entries.length - 1; i++) {
+        try {
+          const hd0 = new HDateCtor(entries[i].date);
+          const hd1 = new HDateCtor(entries[i + 1].date);
+          const iv  = hd0.abs() - hd1.abs() + 1;
+          if (iv > 0) intervals.push(iv);
+        } catch {}
+      }
+
+      if (intervals.length >= 2) {
+        els.historyHaflagot.hidden = false;
+        const min = Math.min(...intervals);
+        const max = Math.max(...intervals);
+        const avg = intervals.reduce((a, b) => a + b, 0) / intervals.length;
+
+        // ספירת כמה פעמים כל הפלגה הופיעה
+        const counts = {};
+        for (const iv of intervals) counts[iv] = (counts[iv] || 0) + 1;
+        const unique = Object.keys(counts).map(Number).sort((a, b) => a - b);
+
+        els.historyHaflagot.innerHTML = "";
+
+        const title = document.createElement("div");
+        title.className = "haf-strip__title";
+        title.textContent = `פיזור הפלגות (${intervals.length} מדידות)`;
+        els.historyHaflagot.appendChild(title);
+
+        const track = document.createElement("div");
+        track.className = "haf-strip__track";
+        const range = max - min || 1;
+
+        for (const iv of unique) {
+          const dot = document.createElement("div");
+          dot.className = "haf-strip__dot";
+          const pct = ((iv - min) / range) * 100;
+          dot.style.setProperty("--pct", `${pct}%`);
+          dot.dataset.count = counts[iv];
+          const lbl = document.createElement("span");
+          lbl.className = "haf-strip__lbl";
+          lbl.textContent = iv;
+          dot.appendChild(lbl);
+          if (counts[iv] > 1) {
+            const badge = document.createElement("span");
+            badge.className = "haf-strip__badge";
+            badge.textContent = `×${counts[iv]}`;
+            dot.appendChild(badge);
+          }
+          track.appendChild(dot);
+        }
+        els.historyHaflagot.appendChild(track);
+
+        const stats = document.createElement("div");
+        stats.className = "haf-strip__stats";
+        stats.textContent = `טווח: ${min}–${max} · ממוצע: ${avg % 1 === 0 ? avg : avg.toFixed(1)} ימים`;
+        els.historyHaflagot.appendChild(stats);
+      } else {
+        els.historyHaflagot.hidden = true;
+      }
     }
   }
   els.historyModal.hidden = false;
