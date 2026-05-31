@@ -29,6 +29,7 @@ const els = {
   fullDayToggle:         document.querySelector("#full-day-toggle"),
   multiHaflagahToggle:   document.querySelector("#multi-haflagah-toggle"),
   sightingEndToggle:     document.querySelector("#sighting-end-toggle"),
+  weekdayVesetToggle:    document.querySelector("#weekday-veset-toggle"),
   themeSelect:             document.querySelector("#theme-select"),
   fixedHaflagahSelect:     document.querySelector("#fixed-haflagah-select"),
   notificationsToggle:  document.querySelector("#notifications-toggle"),
@@ -376,8 +377,9 @@ function saveJson(key, value) {
 const DEFAULT_SETTINGS = {
   ozEnabled: false, ozType: "all",
   day31Enabled: false, fullDayEnabled: false,
-  multiHaflagahEnabled: false,
-  sightingEndEnabled:   false,
+  multiHaflagahEnabled:   false,
+  sightingEndEnabled:     false,
+  weekdayVesetEnabled:    false,
   fixedHaflagahMethod: "beit_yosef",  // ב״י | rashal | taz
   theme: "light",
   notificationsEnabled: false,
@@ -1045,7 +1047,7 @@ function detectFixedVeset(entries) {
  * @param {Array} entries — מיון מחדש לישן
  * @returns {Array<{ type, ... }>}
  */
-function detectRareVesetPatterns(entries) {
+function detectRareVesetPatterns(entries, settings) {
   if (!HDateCtor || entries.length < 3) return [];
   const [e0, e1, e2] = entries;
 
@@ -1069,45 +1071,57 @@ function detectRareVesetPatterns(entries) {
 
     // ── 1. וסת החודש בדילוג ──
     // חודשים עוקבים + הפרש יום קבוע ושונה מאפס
+    // לאחר קביעה: חוששת ל-3 הופעות הבאות
     if (m10 === 1 && m21 === 1) {
       const diff01 = d0 - d1, diff12 = d1 - d2;
       if (diff01 === diff12 && diff01 !== 0) {
-        const nextDay   = d0 + diff01;
-        const nextMInfo = addHebMonths(hd0.getFullYear(), hd0.getMonth(), 1);
-        const maxDay    = getHebDaysInMonth(nextMInfo.year, nextMInfo.month);
-        // אם יום מחוץ לטווח → קפוץ לא' של החודש שאחריו
-        let nextHd;
-        if (nextDay < 1) {
-          const prevM = addHebMonths(nextMInfo.year, nextMInfo.month, -1);
-          nextHd = new HDateCtor(getHebDaysInMonth(prevM.year, prevM.month), prevM.month, prevM.year);
-        } else if (nextDay > maxDay) {
-          const skip = addHebMonths(nextMInfo.year, nextMInfo.month, 1);
-          nextHd = new HDateCtor(1, skip.month, skip.year);
-        } else {
-          nextHd = new HDateCtor(nextDay, nextMInfo.month, nextMInfo.year);
+        const nextHds = [];
+        for (let step = 1; step <= 3; step++) {
+          const nextDay   = d0 + diff01 * step;
+          const nextMInfo = addHebMonths(hd0.getFullYear(), hd0.getMonth(), step);
+          const maxDay    = getHebDaysInMonth(nextMInfo.year, nextMInfo.month);
+          if (nextDay >= 1 && nextDay <= maxDay) {
+            nextHds.push(new HDateCtor(nextDay, nextMInfo.month, nextMInfo.year));
+          }
         }
-        results.push({ type: "dilug_month", diff: diff01, nextHd });
+        if (nextHds.length > 0) {
+          results.push({ type: "dilug_month", diff: diff01, nextHd: nextHds[0], nextHds });
+        }
       }
     }
 
     // ── 2. וסת ההפלגה בדילוג ──
-    // הפרש בין ההפלגות קבוע ושונה מאפס (int01 ≠ int12)
-    if (int01 > 0 && int12 > 0 && int01 !== int12) {
-      const step = int01 - int12; // סטפ חיובי = הפלגה גדלה; שלילי = מתקצרת
-      const nextRaw = int01 + step;
-      if (nextRaw > 0) {
-        const nextHd = hd0.add(nextRaw, "d");
-        results.push({ type: "dilug_haflagah", step, interval: int01 + 1, nextHd });
-      }
+    // דורש 4 רשומות (3 הפלגות) שיצרו סטפ עקבי
+    if (entries.length >= 4 && entries[3].tod === e0.tod) {
+      try {
+        const hd3  = new HDateCtor(entries[3].date);
+        const int23 = hd2.abs() - hd3.abs();
+        if (int01 > 0 && int12 > 0 && int23 > 0) {
+          const step1 = int01 - int12;
+          const step2 = int12 - int23;
+          if (step1 === step2 && step1 !== 0) {
+            const nextHds = [];
+            for (let s = 1; s <= 3; s++) {
+              const nextRaw = int01 + step1 * s;
+              if (nextRaw > 0) nextHds.push(hd0.add(nextRaw, "d"));
+            }
+            if (nextHds.length > 0) {
+              results.push({ type: "dilug_haflagah", step: step1, interval: int01 + 1, nextHd: nextHds[0], nextHds });
+            }
+          }
+        }
+      } catch {}
     }
 
-    // ── 3. וסת ימי השבוע ──
+    // ── 3. וסת ימי השבוע (רק אם מופעל בהגדרות) ──
     // אותו יום בשבוע, הפרש שווה וכפולה של 7
-    const dow0 = e0.date.getDay(), dow1 = e1.date.getDay(), dow2 = e2.date.getDay();
-    if (dow0 === dow1 && dow1 === dow2 && int01 === int12 && int01 > 0 && int01 % 7 === 0) {
-      const weekNames = ["ראשון","שני","שלישי","רביעי","חמישי","שישי","שבת"];
-      const nextHd = hd0.add(int01, "d");
-      results.push({ type: "weekly", dayName: weekNames[dow0], weeksInterval: int01 / 7, nextHd });
+    if (settings?.weekdayVesetEnabled) {
+      const dow0 = e0.date.getDay(), dow1 = e1.date.getDay(), dow2 = e2.date.getDay();
+      if (dow0 === dow1 && dow1 === dow2 && int01 === int12 && int01 > 0 && int01 % 7 === 0) {
+        const weekNames = ["ראשון","שני","שלישי","רביעי","חמישי","שישי","שבת"];
+        const nextHd = hd0.add(int01, "d");
+        results.push({ type: "weekly", dayName: weekNames[dow0], weeksInterval: int01 / 7, nextHd, nextHds: [nextHd] });
+      }
     }
 
     // ── 4. וסת הסירוג ──
@@ -1118,7 +1132,7 @@ function detectRareVesetPatterns(entries) {
       const nextHd    = d0 <= maxDay
         ? new HDateCtor(d0, nextMInfo.month, nextMInfo.year)
         : new HDateCtor(maxDay, nextMInfo.month, nextMInfo.year);
-      results.push({ type: "sirug", hDay: d0, nextHd });
+      results.push({ type: "sirug", hDay: d0, nextHd, nextHds: [nextHd] });
     }
 
   } catch {}
@@ -1558,35 +1572,43 @@ function computeMarks() {
   // ══════════════════════════════════════════════════════════════
   // וסתות פחות מצויים — חשש נוסף, לא מבטל את הרגילים
   // ══════════════════════════════════════════════════════════════
-  const rarePatterns = detectRareVesetPatterns(entries);
+  const rarePatterns = detectRareVesetPatterns(entries, state.settings);
   for (const p of rarePatterns) {
-    let lbl = "", nextGreg = null;
+    let lbl = "";
     try {
       switch (p.type) {
         case "dilug_month":
-          nextGreg = p.nextHd.greg();
-          lbl = `דילוג חודש (${p.diff > 0 ? "+" : ""}${p.diff} יום)`;
+          lbl = `וסת החודש בדילוג (${p.diff > 0 ? "+" : ""}${p.diff} יום)`;
           break;
         case "dilug_haflagah":
-          nextGreg = p.nextHd.greg();
-          lbl = `דילוג הפלגה (${p.interval}→${p.interval + p.step} ימים)`;
+          lbl = `וסת ההפלגה בדילוג (${p.interval}→${p.interval + p.step} ימים)`;
           break;
         case "weekly":
-          nextGreg = p.nextHd.greg();
           lbl = `וסת יום ${p.dayName} (כל ${p.weeksInterval} שבועות)`;
           break;
         case "sirug":
-          nextGreg = p.nextHd.greg();
           lbl = `וסת הסירוג (${numToGem(p.hDay)} לחודש, כל חודשיים)`;
           break;
       }
     } catch {}
 
-    if (!nextGreg) continue;
-    const rLabel = `⁓ ${lbl} — ${vesetTodLbl}`;
-    mark(isoKey(nextGreg), rLabel, "veset-rare");
-    if (fullDay) mark(isoKey(prevDay(nextGreg)), rLabel, "veset-rare");
-    sum += `\n\n◈ ${lbl} — ${vesetTodLbl}: ${hebFullGem(nextGreg)}`;
+    if (!lbl) continue;
+    const nextHds = p.nextHds || [p.nextHd];
+    let addedToSum = false;
+    for (const nh of nextHds) {
+      try {
+        const nextGreg = nh.greg();
+        const rLabel = `⁓ ${lbl} — ${vesetTodLbl}`;
+        mark(isoKey(nextGreg), rLabel, "veset-rare");
+        if (fullDay) mark(isoKey(prevDay(nextGreg)), rLabel, "veset-rare");
+        if (!addedToSum) {
+          sum += `\n\n◈ ${lbl} — ${vesetTodLbl}: ${hebFullGem(nextGreg)}`;
+          addedToSum = true;
+        } else {
+          sum += `, ${hebFullGem(nextGreg)}`;
+        }
+      } catch {}
+    }
   }
 
   // ══════════════════════════════════════════════════════════════
@@ -2485,12 +2507,12 @@ els.annualClose?.addEventListener("click", closeAnnual);
 els.annualBackdrop?.addEventListener("click", closeAnnual);
 
 els.annualPrevYear?.addEventListener("click", () => {
-  state.annualViewYear = (state.annualViewYear || state.viewHYear) + 1;
+  state.annualViewYear = (state.annualViewYear || state.viewHYear) - 1;
   renderAnnualView();
 });
 
 els.annualNextYear?.addEventListener("click", () => {
-  state.annualViewYear = (state.annualViewYear || state.viewHYear) - 1;
+  state.annualViewYear = (state.annualViewYear || state.viewHYear) + 1;
   renderAnnualView();
 });
 
@@ -2557,6 +2579,15 @@ els.sightingEndToggle?.addEventListener("click", () => {
   const newVal = els.sightingEndToggle.getAttribute("aria-checked") !== "true";
   els.sightingEndToggle.setAttribute("aria-checked", String(newVal));
   state.settings.sightingEndEnabled = newVal;
+  saveSettings(state.settings);
+  renderMonth();
+});
+
+// טוגל: וסת ימי השבוע
+els.weekdayVesetToggle?.addEventListener("click", () => {
+  const newVal = els.weekdayVesetToggle.getAttribute("aria-checked") !== "true";
+  els.weekdayVesetToggle.setAttribute("aria-checked", String(newVal));
+  state.settings.weekdayVesetEnabled = newVal;
   saveSettings(state.settings);
   renderMonth();
 });
@@ -2895,6 +2926,7 @@ if (els.day31Toggle          && state.settings.day31Enabled)          els.day31T
 if (els.fullDayToggle        && state.settings.fullDayEnabled)        els.fullDayToggle.setAttribute("aria-checked",        "true");
 if (els.multiHaflagahToggle  && state.settings.multiHaflagahEnabled)  els.multiHaflagahToggle.setAttribute("aria-checked",  "true");
 if (els.sightingEndToggle    && state.settings.sightingEndEnabled)    els.sightingEndToggle.setAttribute("aria-checked",    "true");
+if (els.weekdayVesetToggle   && state.settings.weekdayVesetEnabled)   els.weekdayVesetToggle.setAttribute("aria-checked",   "true");
 
 // עמימת/הפעלת שורת טווח אור זרוע לפי מצב הטוגל
 if (els.ozScopeRow)          els.ozScopeRow.classList.toggle("setting-row--disabled", !state.settings.ozEnabled);

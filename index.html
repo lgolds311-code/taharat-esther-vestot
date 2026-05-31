@@ -75,7 +75,7 @@
           <div class="toolbar">
             <div class="toolbar__group">
               <button id="history-btn" class="iconbtn" type="button" aria-label="היסטוריית ראיות" title="היסטוריית ראיות">📋</button>
-              <button id="next-month" class="iconbtn" type="button" aria-label="חודש הבא">❯</button>
+              <button id="prev-month" class="iconbtn" type="button" aria-label="חודש קודם">❮</button>
             </div>
             <div class="monthtitle" aria-live="polite">
               <div id="month-label" class="monthtitle__main">—</div>
@@ -84,7 +84,7 @@
             </div>
             <div class="toolbar__group">
               <button id="annual-btn" class="iconbtn" type="button" aria-label="תצוגה שנתית" title="תצוגה שנתית">📅</button>
-              <button id="prev-month" class="iconbtn" type="button" aria-label="חודש קודם">❮</button>
+              <button id="next-month" class="iconbtn" type="button" aria-label="חודש הבא">❯</button>
               <button id="settings-btn" class="iconbtn" type="button" aria-label="הגדרות">⚙️</button>
             </div>
           </div>
@@ -172,9 +172,9 @@
       <div class="modal__card modal__card--annual">
         <div class="modal__header">
           <div class="annual-nav">
-            <button id="annual-prev-year" class="iconbtn iconbtn--sm" type="button" aria-label="שנה הבאה">❯</button>
+            <button id="annual-prev-year" class="iconbtn iconbtn--sm" type="button" aria-label="שנה קודמת">❮</button>
             <div id="annual-modal-title" class="modal__title annual-nav__title">—</div>
-            <button id="annual-next-year" class="iconbtn iconbtn--sm" type="button" aria-label="שנה קודמת">❮</button>
+            <button id="annual-next-year" class="iconbtn iconbtn--sm" type="button" aria-label="שנה הבאה">❯</button>
           </div>
           <button class="modal__x" type="button" aria-label="סגירה" id="annual-close">✕</button>
         </div>
@@ -306,6 +306,16 @@
                 <div class="setting-desc">כאשר מופעל, ניתן לציין יום סיום הראייה. וסת שחל בימי ההמשך — לא ייחשב כנעקר</div>
               </div>
               <button id="sighting-end-toggle" class="toggle-btn" role="switch" aria-checked="false" type="button" aria-label="הפעל ציון המשך ראייה">
+                <span class="toggle-btn__knob"></span>
+              </button>
+            </div>
+
+            <div class="setting-row">
+              <div class="setting-label">
+                <div class="setting-name">וסת ימי השבוע</div>
+                <div class="setting-desc">זהה כאשר 3 ראיות רצופות חלו באותו יום בשבוע ובאותו מרחק שבועות</div>
+              </div>
+              <button id="weekday-veset-toggle" class="toggle-btn" role="switch" aria-checked="false" type="button" aria-label="הפעל וסת ימי השבוע">
                 <span class="toggle-btn__knob"></span>
               </button>
             </div>
