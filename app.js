@@ -24,9 +24,11 @@ const els = {
   locationStatus: document.querySelector("#location-status"),
   settingsBtn:    document.querySelector("#settings-btn"),
   settingsModal:  document.querySelector("#settings-modal"),
-  ozToggle:       document.querySelector("#oz-toggle"),
-  day31Toggle:    document.querySelector("#day31-toggle"),
-  fullDayToggle:  document.querySelector("#full-day-toggle"),
+  ozToggle:              document.querySelector("#oz-toggle"),
+  day31Toggle:           document.querySelector("#day31-toggle"),
+  fullDayToggle:         document.querySelector("#full-day-toggle"),
+  multiHaflagahToggle:   document.querySelector("#multi-haflagah-toggle"),
+  sightingEndToggle:     document.querySelector("#sighting-end-toggle"),
   themeSelect:             document.querySelector("#theme-select"),
   fixedHaflagahSelect:     document.querySelector("#fixed-haflagah-select"),
   notificationsToggle:  document.querySelector("#notifications-toggle"),
@@ -66,6 +68,20 @@ const els = {
   pillsFields:        document.querySelector("#pills-fields"),
   pillsInterval:      document.querySelector("#pills-interval"),
   pillsTod:           document.querySelector("#pills-tod"),
+  historyBtn:         document.querySelector("#history-btn"),
+  historyModal:       document.querySelector("#history-modal"),
+  historyBackdrop:    document.querySelector("#history-backdrop"),
+  historyClose:       document.querySelector("#history-close"),
+  historyTbody:       document.querySelector("#history-tbody"),
+  historyEmpty:       document.querySelector("#history-empty"),
+  annualBtn:          document.querySelector("#annual-btn"),
+  annualModal:        document.querySelector("#annual-modal"),
+  annualBackdrop:     document.querySelector("#annual-backdrop"),
+  annualClose:        document.querySelector("#annual-close"),
+  annualGrid:         document.querySelector("#annual-grid"),
+  annualTitle:        document.querySelector("#annual-modal-title"),
+  annualPrevYear:     document.querySelector("#annual-prev-year"),
+  annualNextYear:     document.querySelector("#annual-next-year"),
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -360,6 +376,8 @@ function saveJson(key, value) {
 const DEFAULT_SETTINGS = {
   ozEnabled: false, ozType: "all",
   day31Enabled: false, fullDayEnabled: false,
+  multiHaflagahEnabled: false,
+  sightingEndEnabled:   false,
   fixedHaflagahMethod: "beit_yosef",  // ב״י | rashal | taz
   theme: "light",
   notificationsEnabled: false,
@@ -907,6 +925,81 @@ function hebMonthsApart(hdOlder, hdNewer) {
 }
 
 /**
+ * מחזיר מערך של הפלגות פעילות (לא נעקרות) מהיסטוריית הראיות.
+ * הפלגה ישנה P (מראייה i+1 לראייה i) לא נעקרת אם הראייה שבאה אחריה (i-1)
+ * הגיעה לפני מועד ההפלגה הצפוי (ראייה i + P - 1 ימים).
+ * @param {Array} entries — מיון מחדש לישן (e0 = חדשה ביותר)
+ * @returns {number[]} — הפלגות פעילות ייחודיות, מהחדשה לישנה
+ */
+function collectActiveHaflagot(entries) {
+  if (!HDateCtor || entries.length < 2) return [];
+  try {
+    const hd = entries.map(e => new HDateCtor(e.date));
+    const seen = new Set();
+    const result = [];
+
+    const addInterval = (n) => {
+      if (n > 0 && !seen.has(n)) { seen.add(n); result.push(n); }
+    };
+
+    // הפלגה נוכחית תמיד נכנסת
+    const currentInterval = hd[0].abs() - hd[1].abs() + 1;
+    addInterval(currentInterval);
+
+    // בדיקת הפלגות ישנות יותר
+    for (let i = 1; i + 1 < hd.length; i++) {
+      const olderInterval = hd[i].abs() - hd[i + 1].abs() + 1;
+      // מועד ההפלגה הצפוי: ראייה[i] + olderInterval - 1
+      const expectedAbs = hd[i].abs() + olderInterval - 1;
+      // הראייה שבדקה את ההפלגה הזו היא hd[i-1]
+      if (hd[i - 1].abs() <= expectedAbs) {
+        // הגיעה לפני המועד הצפוי (או עליו) → לא נעקרה
+        addInterval(olderInterval);
+      } else {
+        // עברה את המועד הצפוי ולא ראתה → נעקרה
+        break;
+      }
+    }
+
+    return result;
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * בודק אם הראיה הנוכחית היא הפעם השנייה ברצף — הכנה לקביעות וסת.
+ * מחזיר את סוג הדפוס אם נמצא, אחרת null.
+ * @param {Array} entries — מיון מחדש לישן (e0 = חדשה ביותר)
+ * @returns {{ type:"month", hDay:number, tod:string }
+ *          |{ type:"haflagah", interval:number, tod:string }
+ *          |null}
+ */
+function detectApproachingFixed(entries) {
+  if (!HDateCtor || entries.length < 2) return null;
+  const [e0, e1] = entries;
+  if (e0.tod !== e1.tod) return null;
+  try {
+    const hd0 = new HDateCtor(e0.date);
+    const hd1 = new HDateCtor(e1.date);
+    // וסת חודש: אותו יום עברי בחודשים עוקבים
+    if (hd0.getDate() === hd1.getDate() && hebMonthsApart(hd1, hd0) === 1) {
+      return { type: "month", hDay: hd0.getDate(), tod: e0.tod };
+    }
+    // וסת הפלגה: אותה הפלגה פעמיים רצופות (דרושות 3 ראיות, כולן אותה עונה)
+    if (entries.length >= 3 && entries[2].tod === e0.tod) {
+      const hd2  = new HDateCtor(entries[2].date);
+      const int01 = hd0.abs() - hd1.abs();
+      const int12 = hd1.abs() - hd2.abs();
+      if (int01 > 0 && int01 === int12) {
+        return { type: "haflagah", interval: int01 + 1, tod: e0.tod };
+      }
+    }
+  } catch {}
+  return null;
+}
+
+/**
  * בודק אם 3 הרשומות האחרונות קובעות וסת קבוע.
  * תנאים: 3 ראיות רצופות באותה עונה (יום/לילה), ואותו יום עברי לחודש / אותו הפרש.
  * @param {Array} entries — מיון מחדש לישן (כל הרשומות)
@@ -1381,8 +1474,84 @@ function computeMarks() {
         }
         if (method === "taz") sum += `\n  ט״ז: חוששת לשתי הדעות`;
       }
+
+      // ── הפלגות קודמות שלא נעקרו (רק כשהאפשרות מופעלת) ──
+      if (state.settings?.multiHaflagahEnabled) {
+        const activeHaflagot = collectActiveHaflagot(entries);
+        for (const oldInterval of activeHaflagot.slice(1)) { // הראשונה = הנוכחית, כבר מסומנת
+          const oldRule = currHd.add(oldInterval - 1, "d");
+          markVesetDay(oldRule.greg(), `וסת ההפלגה (${oldInterval} ימים — לא נעקר)`, ozHfLbl);
+          sum += `\nוסת ההפלגה (${oldInterval} ימים, לא נעקר): ${hebFullGem(oldRule.greg())} — ${vesetTodLbl}`;
+          if (fullDay) sum += ` (+ לילה מוקדם: ${hebFullGem(prevDay(oldRule.greg()))})`;
+          if (oz && ozHfLbl) sum += `\nאור זרוע (הפלגה — לא נעקר) — ${ozTodLbl}: ${hebFullGem(ozDay(oldRule.greg()))}`;
+        }
+      }
     } else {
       sum += `\nוסת ההפלגה: הוסיפו גם רשומה קודמת כדי לחשב.`;
+    }
+
+    // ── ימי המשך ראייה — וסתות שלא נעקרו ──
+    const currentSightingEnd = state.entries[current.iso]?.sightingEnd;
+    if (state.settings?.sightingEndEnabled && currentSightingEnd && previous) {
+      const prevHd = new HDateCtor(previous.date);
+      // בדיקת וסת החודש של הרשומה הקודמת
+      try {
+        const prevM    = monthVesetForOffset(prevHd, 1);
+        const prevMIso = isoKey(prevM.greg());
+        if (prevMIso > current.iso && prevMIso <= currentSightingEnd) {
+          const nextM    = monthVesetForOffset(prevM, 1);
+          const ozChLbl2 = oz && ozType !== "beinonit" ? "אור זרוע (חודש)" : null;
+          markVesetDay(nextM.greg(), "וסת החודש (לא נעקר — המשך ראייה)", ozChLbl2);
+          sum += `\nוסת החודש (לא נעקר — המשך ראייה) — ${vesetTodLbl}: ${hebFullGem(nextM.greg())}`;
+        }
+      } catch {}
+      // בדיקת עונה בינונית של הרשומה הקודמת
+      try {
+        const prevB    = prevHd.add(29, "d");
+        const prevBIso = isoKey(prevB.greg());
+        if (prevBIso > current.iso && prevBIso <= currentSightingEnd) {
+          const nextB = prevB.add(29, "d");
+          markVesetDay(nextB.greg(), "עונה בינונית (לא נעקרה — המשך ראייה)", oz ? "אור זרוע (בינונית)" : null);
+          sum += `\nעונה בינונית (לא נעקרה — המשך ראייה) — ${vesetTodLbl}: ${hebFullGem(nextB.greg())}`;
+        }
+      } catch {}
+      // בדיקת וסת הפלגה של הרשומה הקודמת
+      if (entries[2]) {
+        try {
+          const prevPrevHd  = new HDateCtor(entries[2].date);
+          const prevInterval = Math.abs(prevHd.abs() - prevPrevHd.abs()) + 1;
+          const prevHaf     = prevHd.add(prevInterval - 1, "d");
+          const prevHafIso  = isoKey(prevHaf.greg());
+          if (prevHafIso > current.iso && prevHafIso <= currentSightingEnd) {
+            const nextHaf  = prevHaf.add(prevInterval - 1, "d");
+            const ozHfLbl2 = oz && ozType !== "beinonit" ? "אור זרוע (הפלגה)" : null;
+            markVesetDay(nextHaf.greg(), `וסת הפלגה (${prevInterval} ימים, לא נעקר — המשך ראייה)`, ozHfLbl2);
+            sum += `\nוסת הפלגה (${prevInterval} ימים, לא נעקר — המשך ראייה) — ${vesetTodLbl}: ${hebFullGem(nextHaf.greg())}`;
+          }
+        } catch {}
+      }
+    }
+
+    // ── הכנה לקביעות וסת (פעם שנייה) ──
+    const approaching = detectApproachingFixed(entries);
+    if (approaching) {
+      // סימון ימי הוסת הרלוונטיים כ"קרוב לקביעות"
+      const markApproaching = (greg) => {
+        const key = isoKey(greg);
+        if (!marks[key]) marks[key] = [];
+        marks[key].push({ label: "ב׳ מתוך ג׳ לקביעות וסת", cat: "approaching-veset" });
+      };
+      if (approaching.type === "month") {
+        // יום החודש הבא — זה יהיה הפעם השלישית
+        try { markApproaching(monthVesetForOffset(currHd, 1).greg()); } catch {}
+      } else {
+        // יום ההפלגה הבא
+        try { markApproaching(currHd.add(approaching.interval - 1, "d").greg()); } catch {}
+      }
+      const desc = approaching.type === "month"
+        ? `${numToGem(approaching.hDay)} לחודש`
+        : `הפלגה של ${approaching.interval} ימים`;
+      sum += `\n\n▪ הכנה לקביעות וסת: זו הפעם השנייה שראית ב${desc} — פעם נוספת ייקבע וסת קבוע.`;
     }
   }
 
@@ -1608,6 +1777,15 @@ function buildCell({ date, muted, today, marks }) {
     mk.textContent = items.map(m => m.label).join(" · ");
     cell.appendChild(mk);
   };
+  // תג "2/3" על ימי וסת שהם הפעם הפוטנציאלית השלישית לקביעות
+  if (cellMarks.some(m => m.cat === "approaching-veset")) {
+    const badge = document.createElement("span");
+    badge.className   = "cell__approaching-badge";
+    badge.textContent = "2/3";
+    badge.title       = "ב׳ מתוך ג׳ לקביעות וסת";
+    cell.appendChild(badge);
+  }
+
   addPill("veset",          "cell__pill--veset");
   addPill("veset-rare",     "cell__pill--veset-rare");
   addPill("veset-pills",    "cell__pill--veset-pills");
@@ -1786,21 +1964,48 @@ function buildCell({ date, muted, today, marks }) {
       });
     };
 
+    /** בונה select לבחירת יום סיום ראייה (מוצג רק כשהאפשרות מופעלת) */
+    function buildEndSightingHTML(startDate, currentEndIso = "") {
+      if (!state.settings?.sightingEndEnabled) return "";
+      let opts = `<option value="">ללא המשך / לא ידוע</option>`;
+      for (let d = 1; d <= 13; d++) {
+        const optDate = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate() + d);
+        const optIso  = isoKey(optDate);
+        let   label   = `+${d} ימים`;
+        try {
+          const hd = new HDateCtor(optDate);
+          label = `${numToGem(d + 1)} ימים — עד ${numToGem(hd.getDate())} ${hebMonthName(hd.getMonth())}`;
+        } catch {}
+        opts += `<option value="${optIso}"${currentEndIso === optIso ? " selected" : ""}>${label}</option>`;
+      }
+      return `<div class="popover__end-sighting"><label class="popover__end-label">יום סיום ראייה:<select class="popover__end-select select select--small">${opts}</select></label></div>`;
+    }
+
+    /** קורא את ערך יום הסיום מה-select בפופ-אפ */
+    function readEndFromPopover() {
+      return els.popoverBody.querySelector(".popover__end-select")?.value || null;
+    }
+
     if (existing) {
       // ── עריכה / מחיקה ──
       const existingFeelings = state.entries[key]?.feelings || "";
       const escapedFeelings  = existingFeelings.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+      const existingEnd      = state.entries[key]?.sightingEnd || "";
+      const endSightingHTML  = buildEndSightingHTML(date, existingEnd);
       openPopover({
         title,
-        bodyHTML: `<div class="popover__info">מסומן כ־${existing === "night" ? "לילה" : "יום"}.</div><label class="popover__feelings-label">הרגשות גוף<textarea class="popover__feelings-input" placeholder="למשל: כאב ראש, עייפות, כאבי בטן...">${escapedFeelings}</textarea></label>${extraHTML}${pillsHTML}`,
+        bodyHTML: `<div class="popover__info">מסומן כ־${existing === "night" ? "לילה" : "יום"}.</div><label class="popover__feelings-label">הרגשות גוף<textarea class="popover__feelings-input" placeholder="למשל: כאב ראש, עייפות, כאבי בטן...">${escapedFeelings}</textarea></label>${endSightingHTML}${extraHTML}${pillsHTML}`,
         actions: [
           {
             label: "שמור", className: "btn btn--primary",
             onClick: () => {
-              const feelings = els.popoverBody.querySelector(".popover__feelings-input")?.value?.trim() || "";
+              const feelings   = els.popoverBody.querySelector(".popover__feelings-input")?.value?.trim() || "";
+              const sightingEnd = readEndFromPopover();
               state.entries[key] = { ...state.entries[key], updatedAt: Date.now() };
               if (feelings) state.entries[key].feelings = feelings;
               else delete state.entries[key].feelings;
+              if (sightingEnd) state.entries[key].sightingEnd = sightingEnd;
+              else delete state.entries[key].sightingEnd;
               saveJson(STORAGE.entries, state.entries);
               renderMonth();
             },
@@ -1845,15 +2050,17 @@ function buildCell({ date, muted, today, marks }) {
         ? `<button type="button" class="btn btn--ghost btn--small popover__copy-prev">העתק הרגשות מהוסת הקודמת</button>`
         : "";
 
+      const newEndSightingHTML = buildEndSightingHTML(date);
       openPopover({
         title,
-        bodyHTML: `<div class="popover__times">☀️ זריחה: ${srStr}&nbsp;&nbsp;&nbsp;🌇 שקיעה: ${ssStr}</div><label class="popover__feelings-label">הרגשות גוף (אופציונלי)<textarea class="popover__feelings-input" placeholder="למשל: כאב ראש, עייפות, כאבי בטן..."></textarea></label>${copyBtnHtml}<div class="popover__question">איך לסמן?</div>${extraHTML}${pillsHTML}`,
+        bodyHTML: `<div class="popover__times">☀️ זריחה: ${srStr}&nbsp;&nbsp;&nbsp;🌇 שקיעה: ${ssStr}</div><label class="popover__feelings-label">הרגשות גוף (אופציונלי)<textarea class="popover__feelings-input" placeholder="למשל: כאב ראש, עייפות, כאבי בטן..."></textarea></label>${copyBtnHtml}${newEndSightingHTML}<div class="popover__question">איך לסמן?</div>${extraHTML}${pillsHTML}`,
         actions: [
           {
             label: "יום ☀️", className: dayClass,
             onClick: () => {
-              const feelings = els.popoverBody.querySelector(".popover__feelings-input")?.value?.trim() || "";
-              state.entries[key] = { tod: "day", updatedAt: Date.now(), ...(feelings && { feelings }) };
+              const feelings    = els.popoverBody.querySelector(".popover__feelings-input")?.value?.trim() || "";
+              const sightingEnd = readEndFromPopover();
+              state.entries[key] = { tod: "day", updatedAt: Date.now(), ...(feelings && { feelings }), ...(sightingEnd && { sightingEnd }) };
               saveJson(STORAGE.entries, state.entries);
               renderMonth();
             },
@@ -1861,8 +2068,9 @@ function buildCell({ date, muted, today, marks }) {
           {
             label: "לילה 🌙", className: nightClass,
             onClick: () => {
-              const feelings = els.popoverBody.querySelector(".popover__feelings-input")?.value?.trim() || "";
-              state.entries[key] = { tod: "night", updatedAt: Date.now(), ...(feelings && { feelings }) };
+              const feelings    = els.popoverBody.querySelector(".popover__feelings-input")?.value?.trim() || "";
+              const sightingEnd = readEndFromPopover();
+              state.entries[key] = { tod: "night", updatedAt: Date.now(), ...(feelings && { feelings }), ...(sightingEnd && { sightingEnd }) };
               saveJson(STORAGE.entries, state.entries);
               renderMonth();
             },
@@ -2107,9 +2315,190 @@ els.settingsBtn?.addEventListener("click", openSettings);
 document.querySelector("#settings-close")?.addEventListener("click", closeSettings);
 document.querySelector("#settings-backdrop")?.addEventListener("click", closeSettings);
 
+// ── היסטוריית ראיות (modal) ──
+function openHistory() {
+  if (!els.historyModal) return;
+  const entries = getSortedEntries().slice(0, 12);
+  els.historyTbody.innerHTML = "";
+  if (!entries.length) {
+    els.historyEmpty.hidden = false;
+  } else {
+    els.historyEmpty.hidden = true;
+    for (const e of entries) {
+      try {
+        const hd  = new HDateCtor(e.date);
+        const row = document.createElement("tr");
+        const tdMonth = document.createElement("td");
+        tdMonth.textContent = hebMonthName(hd.getMonth());
+        const tdDay = document.createElement("td");
+        tdDay.textContent = numToGem(hd.getDate());
+        const tdTod = document.createElement("td");
+        tdTod.textContent = e.tod === "night" ? "לילה 🌙" : "יום ☀️";
+        row.appendChild(tdMonth);
+        row.appendChild(tdDay);
+        row.appendChild(tdTod);
+        els.historyTbody.appendChild(row);
+      } catch {}
+    }
+  }
+  els.historyModal.hidden = false;
+}
+function closeHistory() {
+  if (els.historyModal) els.historyModal.hidden = true;
+}
+
+els.historyBtn?.addEventListener("click", openHistory);
+els.historyClose?.addEventListener("click", closeHistory);
+els.historyBackdrop?.addEventListener("click", closeHistory);
+
+// ─────────────────────────────────────────────────────────────────────────────
+// תצוגה שנתית
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** מחשב את נקודות הסימון לתצוגה השנתית — ראיות / וסת חודש / וסת הפלגה+בינונית */
+function computeAnnualMarks() {
+  const sightings = new Set();
+  const vesetM    = new Set();  // וסת חודש — סגול
+  const vesetH    = new Set();  // וסת הפלגה + בינונית — טורקיז
+  if (!HDateCtor) return { sightings, vesetM, vesetH };
+
+  const entries = getSortedEntries();
+  for (const e of entries) sightings.add(e.iso);
+
+  for (let i = 0; i < entries.length; i++) {
+    try {
+      const hd = new HDateCtor(entries[i].date);
+      // וסת חודש
+      try { vesetM.add(isoKey(monthVesetForOffset(hd, 1).greg())); } catch {}
+      // עונה בינונית (יום 30)
+      try { vesetH.add(isoKey(hd.add(29, "d").greg())); } catch {}
+      // וסת הפלגה
+      if (i + 1 < entries.length) {
+        try {
+          const prevHd   = new HDateCtor(entries[i + 1].date);
+          const interval = Math.abs(hd.abs() - prevHd.abs()) + 1;
+          vesetH.add(isoKey(hd.add(interval - 1, "d").greg()));
+        } catch {}
+      }
+    } catch {}
+  }
+
+  // ראיות גוברות על וסתות
+  for (const iso of sightings) { vesetM.delete(iso); vesetH.delete(iso); }
+  return { sightings, vesetM, vesetH };
+}
+
+const DOW_LABELS = ["א׳","ב׳","ג׳","ד׳","ה׳","ו׳","ש׳"];
+
+function renderAnnualView() {
+  if (!els.annualGrid || !HDateCtor) return;
+  const hYear = state.annualViewYear || state.viewHYear;
+  els.annualTitle.textContent = `תצוגה שנתית — ${numToGem(hYear)}`;
+
+  const { sightings, vesetM, vesetH } = computeAnnualMarks();
+
+  // קבע כמה חודשים בשנה (12 או 13 בשנה מעוברת)
+  const monthsCount = (function() {
+    try {
+      if (typeof HDateCtor.isLeapYear === "function") return HDateCtor.isLeapYear(hYear) ? 13 : 12;
+      return new HDateCtor(1, 7, hYear).isLeapYear?.() ? 13 : 12;
+    } catch { return 12; }
+  })();
+
+  els.annualGrid.innerHTML = "";
+
+  // סדר חודשים — מתשרי (7) עד אלול (6 בשנה רגילה) / אדר ב׳ (13) בשנה מעוברת
+  const monthOrder = [];
+  for (let m = 7; m <= monthsCount + 6; m++) {
+    const mm = m > 13 ? m - 13 : m;
+    if (mm >= 1 && mm <= 13) monthOrder.push(mm);
+  }
+
+  for (const hMonth of monthOrder) {
+    let daysInMonth;
+    try { daysInMonth = getHebDaysInMonth(hYear, hMonth); } catch { continue; }
+
+    const card = document.createElement("div");
+    card.className = "annual-month";
+
+    const nameEl = document.createElement("div");
+    nameEl.className = "annual-month__name";
+    nameEl.textContent = hebMonthName(hMonth);
+    card.appendChild(nameEl);
+
+    // כותרות ימות שבוע
+    const dowRow = document.createElement("div");
+    dowRow.className = "annual-month__dow";
+    for (const lbl of DOW_LABELS) {
+      const d = document.createElement("div");
+      d.className = "annual-dow-cell";
+      d.textContent = lbl;
+      dowRow.appendChild(d);
+    }
+    card.appendChild(dowRow);
+
+    const daysGrid = document.createElement("div");
+    daysGrid.className = "annual-month__days";
+
+    // עמודה של היום הראשון (0=ראשון, 6=שבת)
+    let firstDow = 0;
+    try { firstDow = new HDateCtor(1, hMonth, hYear).getDay(); } catch {}
+
+    // תאים ריקים לפני היום הראשון
+    for (let e = 0; e < firstDow; e++) {
+      const empty = document.createElement("div");
+      empty.className = "annual-day";
+      daysGrid.appendChild(empty);
+    }
+
+    for (let d = 1; d <= daysInMonth; d++) {
+      let iso = "";
+      try { iso = isoKey(new HDateCtor(d, hMonth, hYear).greg()); } catch {}
+
+      const cell = document.createElement("div");
+      cell.className = "annual-day";
+      if (iso && sightings.has(iso))    cell.classList.add("annual-day--sighting");
+      else if (iso && vesetM.has(iso))   cell.classList.add("annual-day--veset-month");
+      else if (iso && vesetH.has(iso))   cell.classList.add("annual-day--veset-haflagah");
+      cell.textContent = numToGem(d);
+      daysGrid.appendChild(cell);
+    }
+
+    card.appendChild(daysGrid);
+    els.annualGrid.appendChild(card);
+  }
+}
+
+function openAnnual() {
+  if (!els.annualModal) return;
+  state.annualViewYear = state.viewHYear;
+  renderAnnualView();
+  els.annualModal.hidden = false;
+}
+
+function closeAnnual() {
+  if (els.annualModal) els.annualModal.hidden = true;
+}
+
+els.annualBtn?.addEventListener("click", openAnnual);
+els.annualClose?.addEventListener("click", closeAnnual);
+els.annualBackdrop?.addEventListener("click", closeAnnual);
+
+els.annualPrevYear?.addEventListener("click", () => {
+  state.annualViewYear = (state.annualViewYear || state.viewHYear) + 1;
+  renderAnnualView();
+});
+
+els.annualNextYear?.addEventListener("click", () => {
+  state.annualViewYear = (state.annualViewYear || state.viewHYear) - 1;
+  renderAnnualView();
+});
+
 // Escape סוגר גם מודאל הגדרות
 window.addEventListener("keydown", (e) => {
   if (e.key === "Escape" && els.settingsModal && !els.settingsModal.hidden) closeSettings();
+  if (e.key === "Escape" && els.historyModal  && !els.historyModal.hidden)  closeHistory();
+  if (e.key === "Escape" && els.annualModal   && !els.annualModal.hidden)   closeAnnual();
 });
 
 // טוגל אור זרוע
@@ -2150,6 +2539,24 @@ els.fullDayToggle?.addEventListener("click", () => {
   const newVal = els.fullDayToggle.getAttribute("aria-checked") !== "true";
   els.fullDayToggle.setAttribute("aria-checked", String(newVal));
   state.settings.fullDayEnabled = newVal;
+  saveSettings(state.settings);
+  renderMonth();
+});
+
+// טוגל: וסת קצרה אינה עוקרת ארוכה
+els.multiHaflagahToggle?.addEventListener("click", () => {
+  const newVal = els.multiHaflagahToggle.getAttribute("aria-checked") !== "true";
+  els.multiHaflagahToggle.setAttribute("aria-checked", String(newVal));
+  state.settings.multiHaflagahEnabled = newVal;
+  saveSettings(state.settings);
+  renderMonth();
+});
+
+// טוגל: ציון המשך ראייה
+els.sightingEndToggle?.addEventListener("click", () => {
+  const newVal = els.sightingEndToggle.getAttribute("aria-checked") !== "true";
+  els.sightingEndToggle.setAttribute("aria-checked", String(newVal));
+  state.settings.sightingEndEnabled = newVal;
   saveSettings(state.settings);
   renderMonth();
 });
@@ -2483,9 +2890,11 @@ if (savedView?.hYear && savedView?.hMonth) {
 }
 
 // הפעל טוגלים לפי ההגדרות השמורות
-if (els.ozToggle             && state.settings.ozEnabled)            els.ozToggle.setAttribute("aria-checked",            "true");
-if (els.day31Toggle          && state.settings.day31Enabled)         els.day31Toggle.setAttribute("aria-checked",         "true");
-if (els.fullDayToggle        && state.settings.fullDayEnabled)       els.fullDayToggle.setAttribute("aria-checked",       "true");
+if (els.ozToggle             && state.settings.ozEnabled)             els.ozToggle.setAttribute("aria-checked",             "true");
+if (els.day31Toggle          && state.settings.day31Enabled)          els.day31Toggle.setAttribute("aria-checked",          "true");
+if (els.fullDayToggle        && state.settings.fullDayEnabled)        els.fullDayToggle.setAttribute("aria-checked",        "true");
+if (els.multiHaflagahToggle  && state.settings.multiHaflagahEnabled)  els.multiHaflagahToggle.setAttribute("aria-checked",  "true");
+if (els.sightingEndToggle    && state.settings.sightingEndEnabled)    els.sightingEndToggle.setAttribute("aria-checked",    "true");
 
 // עמימת/הפעלת שורת טווח אור זרוע לפי מצב הטוגל
 if (els.ozScopeRow)          els.ozScopeRow.classList.toggle("setting-row--disabled", !state.settings.ozEnabled);

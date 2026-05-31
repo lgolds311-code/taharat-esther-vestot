@@ -73,14 +73,20 @@
       <main class="main">
         <section class="panel">
           <div class="toolbar">
-            <button id="prev-month" class="iconbtn" type="button" aria-label="חודש קודם">❮</button>
+            <div class="toolbar__group">
+              <button id="history-btn" class="iconbtn" type="button" aria-label="היסטוריית ראיות" title="היסטוריית ראיות">📋</button>
+              <button id="next-month" class="iconbtn" type="button" aria-label="חודש הבא">❯</button>
+            </div>
             <div class="monthtitle" aria-live="polite">
               <div id="month-label" class="monthtitle__main">—</div>
               <div id="month-heb" class="monthtitle__heb">—</div>
               <div id="month-sub" class="monthtitle__sub">—</div>
             </div>
-            <button id="next-month" class="iconbtn" type="button" aria-label="חודש הבא">❯</button>
-            <button id="settings-btn" class="iconbtn" type="button" aria-label="הגדרות">⚙️</button>
+            <div class="toolbar__group">
+              <button id="annual-btn" class="iconbtn" type="button" aria-label="תצוגה שנתית" title="תצוגה שנתית">📅</button>
+              <button id="prev-month" class="iconbtn" type="button" aria-label="חודש קודם">❮</button>
+              <button id="settings-btn" class="iconbtn" type="button" aria-label="הגדרות">⚙️</button>
+            </div>
           </div>
 
           <div class="calendar" role="grid" aria-label="לוח טהרת אסתר">
@@ -160,6 +166,53 @@
       </div>
     </div>
 
+    <!-- Modal תצוגה שנתית -->
+    <div id="annual-modal" class="modal" hidden role="dialog" aria-modal="true" aria-labelledby="annual-modal-title">
+      <div class="modal__backdrop" id="annual-backdrop"></div>
+      <div class="modal__card modal__card--annual">
+        <div class="modal__header">
+          <div class="annual-nav">
+            <button id="annual-prev-year" class="iconbtn iconbtn--sm" type="button" aria-label="שנה הבאה">❯</button>
+            <div id="annual-modal-title" class="modal__title annual-nav__title">—</div>
+            <button id="annual-next-year" class="iconbtn iconbtn--sm" type="button" aria-label="שנה קודמת">❮</button>
+          </div>
+          <button class="modal__x" type="button" aria-label="סגירה" id="annual-close">✕</button>
+        </div>
+        <div class="modal__body">
+          <div id="annual-grid" class="annual-grid"></div>
+          <div class="annual-legend">
+            <span class="annual-legend__item annual-legend__item--sighting">ראייה</span>
+            <span class="annual-legend__item annual-legend__item--veset-month">וסת חודש</span>
+            <span class="annual-legend__item annual-legend__item--veset-haflagah">וסת הפלגה / בינונית</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal היסטוריית ראיות -->
+    <div id="history-modal" class="modal" hidden role="dialog" aria-modal="true" aria-labelledby="history-modal-title">
+      <div class="modal__backdrop" id="history-backdrop"></div>
+      <div class="modal__card modal__card--narrow">
+        <div class="modal__header">
+          <div id="history-modal-title" class="modal__title">📋 היסטוריית ראיות</div>
+          <button class="modal__x" type="button" aria-label="סגירה" id="history-close">✕</button>
+        </div>
+        <div class="modal__body">
+          <table class="history-table">
+            <thead>
+              <tr>
+                <th>חודש</th>
+                <th>יום</th>
+                <th>עונה</th>
+              </tr>
+            </thead>
+            <tbody id="history-tbody"></tbody>
+          </table>
+          <div id="history-empty" class="history-empty" hidden>אין ראיות רשומות עדיין.</div>
+        </div>
+      </div>
+    </div>
+
     <!-- Modal הגדרות -->
     <div id="settings-modal" class="modal" hidden role="dialog" aria-modal="true" aria-labelledby="settings-modal-title">
       <div class="modal__backdrop" id="settings-backdrop"></div>
@@ -235,6 +288,26 @@
                 <option value="rashal">רש״ל — מיום הראיה</option>
                 <option value="taz">ט״ז — שתי הדעות</option>
               </select>
+            </div>
+
+            <div class="setting-row">
+              <div class="setting-label">
+                <div class="setting-name">וסת קצרה אינה עוקרת ארוכה</div>
+                <div class="setting-desc">הפלגה ישנה לא נעקרת אם הראייה הבאה הגיעה לפני מועדה הצפוי</div>
+              </div>
+              <button id="multi-haflagah-toggle" class="toggle-btn" role="switch" aria-checked="false" type="button" aria-label="הפעל: וסת קצרה אינה עוקרת ארוכה">
+                <span class="toggle-btn__knob"></span>
+              </button>
+            </div>
+
+            <div class="setting-row">
+              <div class="setting-label">
+                <div class="setting-name">ציון המשך ראייה</div>
+                <div class="setting-desc">כאשר מופעל, ניתן לציין יום סיום הראייה. וסת שחל בימי ההמשך — לא ייחשב כנעקר</div>
+              </div>
+              <button id="sighting-end-toggle" class="toggle-btn" role="switch" aria-checked="false" type="button" aria-label="הפעל ציון המשך ראייה">
+                <span class="toggle-btn__knob"></span>
+              </button>
             </div>
 
           </div>
