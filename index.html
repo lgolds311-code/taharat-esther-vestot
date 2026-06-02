@@ -86,6 +86,7 @@
               <button id="annual-btn" class="iconbtn" type="button" aria-label="תצוגה שנתית" title="תצוגה שנתית">📅</button>
               <button id="next-month" class="iconbtn" type="button" aria-label="חודש הבא">❯</button>
               <button id="settings-btn" class="iconbtn" type="button" aria-label="הגדרות">⚙️</button>
+              <button id="tour-btn" class="iconbtn" type="button" aria-label="הדרכה" title="הדרכה — סיור מודרך">❓</button>
             </div>
           </div>
 
@@ -692,6 +693,23 @@
     <div id="notif-active-banner" role="alert" aria-live="assertive" hidden>
       <span id="notif-active-text">🔔 תזכורת פעילה</span>
       <button id="notif-active-dismiss" type="button">עצרי ✕</button>
+    </div>
+
+    <!-- Tour / Onboarding -->
+    <div id="tour-overlay" hidden>
+      <div id="tour-spotlight" hidden></div>
+      <div id="tour-tooltip" class="tour-tooltip">
+        <div class="tour-tooltip__header">
+          <span id="tour-counter" class="tour-tooltip__counter">1 / 9</span>
+          <button id="tour-skip" class="tour-tooltip__skip" type="button">דלג על הסיור</button>
+        </div>
+        <div id="tour-title" class="tour-tooltip__title"></div>
+        <div id="tour-text" class="tour-tooltip__text"></div>
+        <div class="tour-tooltip__footer">
+          <button id="tour-prev" class="tour-btn tour-btn--ghost" type="button">‹ קודם</button>
+          <button id="tour-next" class="tour-btn tour-btn--primary" type="button">הבא ›</button>
+        </div>
+      </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/@hebcal/core@6.0.8/dist/bundle.min.js"></script>

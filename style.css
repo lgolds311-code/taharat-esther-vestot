@@ -1871,3 +1871,139 @@ body.theme-floral .footer { color: rgba(120,40,70,.45); }
   from { opacity: 0; transform: translateX(-50%) translateY(-1rem); }
   to   { opacity: 1; transform: translateX(-50%) translateY(0); }
 }
+
+/* ── Tour / Onboarding ────────────────────────────────────────────────────── */
+#tour-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9000;
+  background: transparent;   /* spotlight div handles the dark bg */
+  pointer-events: all;
+}
+#tour-overlay[hidden] { display: none; }
+/* used for welcome/done steps that have no target element */
+#tour-overlay.tour-overlay--centered { background: rgba(0, 0, 0, 0.68); }
+
+/* The actual spotlight cutout: sits over the target, box-shadow darkens everything else */
+#tour-spotlight {
+  position: fixed;
+  z-index: 9001;
+  pointer-events: none;
+  border-radius: 10px;
+  border: 2px solid var(--brand);
+  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.68),
+              0 0 0 4px rgba(217, 70, 239, 0.25),
+              0 0 24px rgba(217, 70, 239, 0.3);
+  transition: top 0.25s ease, left 0.25s ease, width 0.25s ease, height 0.25s ease;
+}
+#tour-spotlight[hidden] { display: none !important; }
+
+.tour-tooltip {
+  position: fixed;
+  z-index: 9002;
+  width: min(340px, calc(100vw - 24px));
+  background: rgba(20, 6, 32, 0.98);
+  border: 1px solid rgba(217, 70, 239, 0.35);
+  border-radius: var(--radius);
+  padding: 1.2rem 1.4rem 1rem;
+  box-shadow: 0 16px 50px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(168, 85, 247, 0.08) inset;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  direction: rtl;
+  pointer-events: all;
+}
+.tour-tooltip__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.55rem;
+}
+.tour-tooltip__counter {
+  font-size: 0.75rem;
+  color: var(--muted);
+  letter-spacing: 0.03em;
+}
+.tour-tooltip__skip {
+  background: none;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 0.8rem;
+  padding: 0.1rem 0.3rem;
+  font-family: var(--font);
+  border-radius: 4px;
+}
+.tour-tooltip__skip:hover { color: var(--text); background: rgba(255,255,255,.06); }
+.tour-tooltip__title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--brand);
+  margin-bottom: 0.45rem;
+  line-height: 1.35;
+}
+.tour-tooltip__text {
+  font-size: 0.88rem;
+  color: var(--text);
+  line-height: 1.65;
+  margin-bottom: 1rem;
+  white-space: pre-line;
+}
+.tour-tooltip__footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+}
+.tour-btn {
+  padding: 0.45rem 1rem;
+  border-radius: var(--radius-sm);
+  border: none;
+  cursor: pointer;
+  font-family: var(--font);
+  font-size: 0.88rem;
+  font-weight: 600;
+  transition: opacity 0.15s;
+}
+.tour-btn:hover { opacity: 0.82; }
+.tour-btn--primary { background: var(--brand); color: #fff; }
+.tour-btn--ghost {
+  background: transparent;
+  color: var(--muted);
+  border: 1px solid var(--border);
+}
+.tour-btn[hidden] { display: none; }
+
+/* Theme overrides for the tour tooltip */
+body.theme-light .tour-tooltip {
+  background: rgba(253, 246, 255, 0.98);
+  border-color: rgba(147, 51, 234, 0.28);
+  color: #2d0050;
+}
+body.theme-light .tour-tooltip__title { color: #7c3aed; }
+body.theme-light .tour-tooltip__text  { color: #2d0050; }
+body.theme-light .tour-btn--ghost { color: #7c3aed; border-color: rgba(147,51,234,.25); }
+body.theme-light .tour-tooltip__skip { color: rgba(109,40,217,.55); }
+body.theme-light .tour-tooltip__counter { color: rgba(109,40,217,.55); }
+body.theme-light #tour-spotlight {
+  border-color: #7c3aed;
+  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.6),
+              0 0 0 4px rgba(124, 58, 237, 0.25),
+              0 0 24px rgba(124, 58, 237, 0.3);
+}
+
+body.theme-floral .tour-tooltip {
+  background: rgba(255, 248, 244, 0.98);
+  border-color: rgba(190, 24, 93, 0.28);
+}
+body.theme-floral .tour-tooltip__title { color: #9d174d; }
+body.theme-floral .tour-tooltip__text  { color: #3b0a1e; }
+body.theme-floral .tour-btn--primary { background: #be185d; }
+body.theme-floral .tour-btn--ghost { color: #9d174d; border-color: rgba(190,24,93,.25); }
+body.theme-floral .tour-tooltip__skip { color: rgba(157,23,77,.55); }
+body.theme-floral .tour-tooltip__counter { color: rgba(157,23,77,.55); }
+body.theme-floral #tour-spotlight {
+  border-color: #be185d;
+  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.6),
+              0 0 0 4px rgba(190, 24, 93, 0.25),
+              0 0 24px rgba(190, 24, 93, 0.3);
+}

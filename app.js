@@ -96,6 +96,7 @@ const STORAGE = {
   settings:         "monthlyCalendar.settings.v1",
   lastNotification: "monthlyCalendar.lastNotification.v1",
   soundData:        "monthlyCalendar.soundData.v1",
+  tourSeen:         "monthlyCalendar.tourSeen.v1",
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -3163,3 +3164,168 @@ if ("serviceWorker" in navigator) {
 
 renderMonth();
 checkDailyNotifications();
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Tour / Onboarding
+// ─────────────────────────────────────────────────────────────────────────────
+const TOUR_STEPS = [
+  {
+    title: "ברוכות הבאות ללוח טהרת אסתר! 🌸",
+    text: "מדריך קצר יסביר כיצד להשתמש בלוח.\nניתן לדלג על הסיור בכל שלב.",
+    target: null,
+  },
+  {
+    title: "לוח החודש — רישום ראייה",
+    text: "לחצי על כל תאריך בלוח כדי לרשום ראייה.\nתוכלי לבחור: יום ☀️ (הראייה הייתה ביום) או לילה 🌙 (הייתה בלילה).\n\nלאחר הרישום — הלוח יחשב אוטומטית עונות פרישה, שבעה נקיים, הפסק טהרה ועוד.",
+    target: "#grid",
+  },
+  {
+    title: "ניווט בין חודשים ❮ ❯",
+    text: "לחצי על ❮ לחזרה לחודש הקודם, ועל ❯ למעבר לחודש הבא.",
+    target: "#prev-month",
+  },
+  {
+    title: "היסטוריית ראיות 📋",
+    text: "לחצי כאן כדי לראות את רשימת כל הראיות הרשומות, יחד עם ההפלגות (המרחק בימים בין ראייה לראייה).",
+    target: "#history-btn",
+  },
+  {
+    title: "תצוגה שנתית 📅",
+    text: "לחצי כאן לתצוגה שנתית — ראי את כל הראיות ועונות הפרישה ב-12 חודשים במבט אחד.",
+    target: "#annual-btn",
+  },
+  {
+    title: "הגדרות ⚙️",
+    text: "לחצי כאן לפתיחת הגדרות האפליקציה: שיטת חישוב וסתות, עיצוב, התראות, הפסק טהרה, גלולות ועוד.\n\nחשוב: אין צורך לעדכן ידנית את הפסק הטהרה — הלוח מחשב הכל אוטומטית לאחר רישום ראייה.",
+    target: "#settings-btn",
+  },
+  {
+    title: "תוצאות החישוב",
+    text: "לאחר רישום ראייה — כאן יופיעו תוצאות החישוב המלא: עונות פרישה, הפסק טהרה, שבעה נקיים, מועד הטבילה ועוד.",
+    target: "#calc-summary",
+  },
+  {
+    title: "ייצוא וגיבוי 💾",
+    text: "ייצאי את ימי הפרישה ישירות ליומן (Google / Apple / Outlook).\nניתן גם לגבות את כל הנתונים לקובץ ולשחזרם מאוחר יותר.",
+    target: "#export-ics",
+  },
+  {
+    title: "הסיור הסתיים! ✨",
+    text: "עכשיו את מוכנה להשתמש בלוח.\n\nלחזרה על הסיור בכל עת — לחצי על כפתור ❓ בסרגל הכלים.",
+    target: null,
+  },
+];
+
+let _tourStep = 0;
+
+function _tourPositionTooltip(tooltip, rect) {
+  const PAD = 8;
+  const tw  = tooltip.offsetWidth  || 340;
+  const th  = tooltip.offsetHeight || 230;
+  const vw  = window.innerWidth;
+  const vh  = window.innerHeight;
+  const GAP = 16;
+
+  const spotBottom  = rect.bottom + PAD;
+  const spotTop     = rect.top    - PAD;
+  const spotCenterX = rect.left + rect.width / 2;
+
+  let top  = (spotBottom + GAP + th < vh - 12) ? spotBottom + GAP : spotTop - GAP - th;
+  let left = spotCenterX - tw / 2;
+
+  top  = Math.max(12, top);
+  left = Math.max(12, Math.min(left, vw - tw - 12));
+
+  tooltip.style.top       = top  + "px";
+  tooltip.style.left      = left + "px";
+  tooltip.style.right     = "auto";
+  tooltip.style.transform = "";
+}
+
+function _tourShowStep() {
+  const overlay    = document.getElementById("tour-overlay");
+  const spotlight  = document.getElementById("tour-spotlight");
+  const tooltip    = document.getElementById("tour-tooltip");
+  const titleEl    = document.getElementById("tour-title");
+  const textEl     = document.getElementById("tour-text");
+  const prevBtn    = document.getElementById("tour-prev");
+  const nextBtn    = document.getElementById("tour-next");
+  const skipBtn    = document.getElementById("tour-skip");
+  const counter    = document.getElementById("tour-counter");
+
+  const step   = TOUR_STEPS[_tourStep];
+  const isLast = _tourStep === TOUR_STEPS.length - 1;
+
+  titleEl.textContent = step.title;
+  textEl.textContent  = step.text;
+  counter.textContent = `${_tourStep + 1} / ${TOUR_STEPS.length}`;
+  prevBtn.hidden      = _tourStep === 0;
+  nextBtn.textContent = isLast ? "סיום ✓" : "הבא ›";
+  skipBtn.hidden      = isLast;
+  overlay.hidden      = false;
+
+  if (step.target) {
+    const targetEl = document.querySelector(step.target);
+    if (targetEl) {
+      const rect = targetEl.getBoundingClientRect();
+      const PAD  = 8;
+      overlay.classList.remove("tour-overlay--centered");
+      spotlight.hidden        = false;
+      spotlight.style.top     = (rect.top    - PAD) + "px";
+      spotlight.style.left    = (rect.left   - PAD) + "px";
+      spotlight.style.width   = (rect.width  + PAD * 2) + "px";
+      spotlight.style.height  = (rect.height + PAD * 2) + "px";
+      requestAnimationFrame(() => _tourPositionTooltip(tooltip, rect));
+      return;
+    }
+  }
+
+  // No target — centered card, plain dark overlay
+  spotlight.hidden = true;
+  overlay.classList.add("tour-overlay--centered");
+  tooltip.style.top       = "50%";
+  tooltip.style.left      = "50%";
+  tooltip.style.right     = "auto";
+  tooltip.style.transform = "translate(-50%, -50%)";
+}
+
+function startTour(step) {
+  _tourStep = step ?? 0;
+  _tourShowStep();
+}
+
+function endTour() {
+  const overlay   = document.getElementById("tour-overlay");
+  const spotlight = document.getElementById("tour-spotlight");
+  if (overlay)   overlay.hidden   = true;
+  if (spotlight) spotlight.hidden = true;
+  localStorage.setItem(STORAGE.tourSeen, "1");
+}
+
+(function _initTour() {
+  const nextBtn  = document.getElementById("tour-next");
+  const prevBtn  = document.getElementById("tour-prev");
+  const skipBtn  = document.getElementById("tour-skip");
+  const tourBtn  = document.getElementById("tour-btn");
+  const tooltip  = document.getElementById("tour-tooltip");
+
+  if (nextBtn) nextBtn.addEventListener("click", () => {
+    if (_tourStep >= TOUR_STEPS.length - 1) { endTour(); return; }
+    _tourStep++;
+    _tourShowStep();
+  });
+  if (prevBtn) prevBtn.addEventListener("click", () => {
+    if (_tourStep > 0) { _tourStep--; _tourShowStep(); }
+  });
+  if (skipBtn) skipBtn.addEventListener("click", endTour);
+  if (tourBtn) tourBtn.addEventListener("click", () => startTour(0));
+
+  // Prevent clicks on the tooltip from propagating to the overlay
+  if (tooltip) tooltip.addEventListener("click", e => e.stopPropagation());
+})();
+
+// Auto-launch on first visit only; mark immediately so a mid-tour close won't re-trigger
+if (!localStorage.getItem(STORAGE.tourSeen)) {
+  localStorage.setItem(STORAGE.tourSeen, "1");
+  setTimeout(() => startTour(0), 700);
+}
