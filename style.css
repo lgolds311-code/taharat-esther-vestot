@@ -118,6 +118,15 @@ body {
   transition: transform 120ms ease, background 120ms ease, border-color 120ms ease;
 }
 
+a.iconbtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  font-size: 18px;
+  box-sizing: border-box;
+}
+
 .iconbtn:hover {
   transform: translateY(-1px);
   background: rgba(217, 70, 239, 0.15);
