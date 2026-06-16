@@ -3233,7 +3233,9 @@ function _tourPositionTooltip(tooltip, rect) {
   let top  = (spotBottom + GAP + th < vh - 12) ? spotBottom + GAP : spotTop - GAP - th;
   let left = spotCenterX - tw / 2;
 
-  top  = Math.max(12, top);
+  // Clamp on BOTH edges so the tooltip (incl. its buttons) is always fully
+  // inside the viewport — otherwise tall targets pushed the card off-screen.
+  top  = Math.max(12, Math.min(top, vh - th - 12));
   left = Math.max(12, Math.min(left, vw - tw - 12));
 
   tooltip.style.top       = top  + "px";
@@ -3267,15 +3269,22 @@ function _tourShowStep() {
   if (step.target) {
     const targetEl = document.querySelector(step.target);
     if (targetEl) {
-      const rect = targetEl.getBoundingClientRect();
-      const PAD  = 8;
+      const PAD = 8;
       overlay.classList.remove("tour-overlay--centered");
-      spotlight.hidden        = false;
-      spotlight.style.top     = (rect.top    - PAD) + "px";
-      spotlight.style.left    = (rect.left   - PAD) + "px";
-      spotlight.style.width   = (rect.width  + PAD * 2) + "px";
-      spotlight.style.height  = (rect.height + PAD * 2) + "px";
-      requestAnimationFrame(() => _tourPositionTooltip(tooltip, rect));
+      spotlight.hidden = false;
+      // Bring the target into view first (it may sit below the fold on some
+      // screens), then measure on the next frame so spotlight + tooltip use
+      // the post-scroll position.
+      try { targetEl.scrollIntoView({ block: "center", behavior: "auto" }); }
+      catch (e) { targetEl.scrollIntoView(); }
+      requestAnimationFrame(() => {
+        const rect = targetEl.getBoundingClientRect();
+        spotlight.style.top     = (rect.top    - PAD) + "px";
+        spotlight.style.left    = (rect.left   - PAD) + "px";
+        spotlight.style.width   = (rect.width  + PAD * 2) + "px";
+        spotlight.style.height  = (rect.height + PAD * 2) + "px";
+        _tourPositionTooltip(tooltip, rect);
+      });
       return;
     }
   }
