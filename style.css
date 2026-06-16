@@ -1514,6 +1514,31 @@ input[type="time"] {
   line-height: 1.35;
 }
 
+.footer__links {
+  margin-top: 8px;
+  text-align: center;
+}
+
+.footer__links a {
+  color: rgba(240, 171, 252, 0.7);
+  text-decoration: none;
+  border-bottom: 1px dotted rgba(240, 171, 252, 0.4);
+}
+
+.footer__links a:hover {
+  color: rgba(240, 171, 252, 0.95);
+}
+
+body.theme-light .footer__links a {
+  color: rgba(124, 58, 237, 0.85);
+  border-bottom-color: rgba(124, 58, 237, 0.4);
+}
+
+body.theme-floral .footer__links a {
+  color: rgba(157, 23, 77, 0.85);
+  border-bottom-color: rgba(157, 23, 77, 0.4);
+}
+
 .footer__memorial {
   margin-top: 10px;
   text-align: center;

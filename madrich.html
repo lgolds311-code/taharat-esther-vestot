@@ -1,0 +1,394 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>מדריך הלכתי — חישוב וסתות, הפסק טהרה ושבעה נקיים | לוח טהרת אסתר</title>
+    <meta name="description" content="מדריך הלכתי תמציתי לחישוב וסתות: וסת שאינו קבוע, וסת קבוע, עקירת וסתות, וסת הדילוג, הסירוג וימי השבוע, וכן הלכות הפסק טהרה, שבעה נקיים וזמן הטבילה. נלווה ללוח טהרת אסתר." />
+    <meta name="keywords" content="חישוב וסתות, וסת קבוע, וסת שאינו קבוע, עונה בינונית, וסת החודש, וסת הפלגה, וסת הדילוג, וסת הסירוג, עקירת וסתות, הפסק טהרה, שבעה נקיים, זמן טבילה, הלכות נידה, פרישה" />
+    <meta name="author" content="yhg" />
+    <link rel="canonical" href="https://lgolds311-code.github.io/taharat-esther-vestot/madrich.html" />
+    <meta property="og:title" content="מדריך הלכתי — וסתות, הפסק טהרה ושבעה נקיים" />
+    <meta property="og:description" content="הסבר תמציתי על חישוב הוסתות, הפסק טהרה, שבעה נקיים וזמן הטבילה — נלווה ללוח טהרת אסתר." />
+    <meta property="og:type" content="article" />
+    <meta property="og:url" content="https://lgolds311-code.github.io/taharat-esther-vestot/madrich.html" />
+    <meta property="og:locale" content="he_IL" />
+    <meta property="og:image" content="https://lgolds311-code.github.io/taharat-esther-vestot/preview.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta name="theme-color" content="#fdf4ff" />
+    <link rel="icon" href="./icon.svg" type="image/svg+xml" />
+    <style>
+      :root {
+        --card: rgba(255, 255, 255, 0.88);
+        --border: rgba(147, 51, 234, 0.18);
+        --brand: #9333ea;
+        --brand-2: #7c3aed;
+        --accent: #db2777;
+        --text: #2d0050;
+        --muted: rgba(88, 28, 135, 0.6);
+        --shadow: 0 18px 44px rgba(147, 51, 234, 0.12);
+        --radius: 16px;
+      }
+      * { box-sizing: border-box; }
+      html { scroll-behavior: smooth; }
+      body {
+        margin: 0;
+        color-scheme: light;
+        font-family: "Segoe UI", "Heebo", system-ui, -apple-system, Arial, sans-serif;
+        color: var(--text);
+        line-height: 1.85;
+        background:
+          radial-gradient(900px 600px at 75% 5%,  rgba(216, 180, 254, 0.55), transparent 60%),
+          radial-gradient(700px 500px at 15% 85%, rgba(196, 181, 253, 0.45), transparent 55%),
+          radial-gradient(500px 400px at 50% 50%, rgba(251, 207, 232, 0.30), transparent 60%),
+          linear-gradient(180deg, #fce7ff 0%, #fdf4ff 55%, #f5f3ff 100%);
+        background-attachment: fixed;
+        min-height: 100vh;
+      }
+      .wrap { max-width: 820px; margin: 0 auto; padding: 2.4rem 1.25rem 4rem; }
+
+      header.hero {
+        text-align: center;
+        padding: 1.5rem 0 1.2rem;
+        border-bottom: 1px solid var(--border);
+        margin-bottom: 2rem;
+      }
+      .hero .logo {
+        display: inline-flex;
+        font-size: 2rem;
+        line-height: 1;
+        padding: 0.55rem;
+        border-radius: 14px;
+        background: rgba(147, 51, 234, 0.1);
+        border: 1px solid rgba(147, 51, 234, 0.25);
+      }
+      h1 {
+        font-size: clamp(1.5rem, 4.5vw, 2.1rem);
+        margin: 0.7rem 0 0.4rem;
+        background: linear-gradient(135deg, #7c3aed 0%, #9333ea 60%, #db2777 100%);
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+        line-height: 1.3;
+      }
+      .hero p.sub { color: var(--muted); margin: 0.2rem 0 0; font-size: 1rem; }
+
+      .intro {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 1.2rem 1.4rem;
+        margin-bottom: 2rem;
+        font-size: 1.02rem;
+        box-shadow: var(--shadow);
+      }
+
+      nav.toc {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 1rem 1.4rem;
+        margin-bottom: 2.4rem;
+        box-shadow: var(--shadow);
+      }
+      nav.toc strong { color: var(--brand); display: block; margin-bottom: 0.5rem; }
+      nav.toc ul { margin: 0; padding-inline-start: 1.2rem; columns: 2; }
+      nav.toc li { margin: 0.25rem 0; }
+      nav.toc a { color: var(--brand-2); text-decoration: none; }
+      nav.toc a:hover { color: var(--accent); text-decoration: underline; }
+
+      section { margin-bottom: 2.6rem; }
+      h2 {
+        font-size: 1.4rem;
+        color: var(--brand);
+        border-inline-start: 4px solid var(--brand);
+        padding-inline-start: 0.7rem;
+        margin: 2rem 0 0.9rem;
+      }
+      h3 {
+        font-size: 1.1rem;
+        color: var(--brand-2);
+        margin: 1.4rem 0 0.4rem;
+      }
+      p { margin: 0.7rem 0; }
+      strong { color: #5b21b6; }
+      ul.clean { padding-inline-start: 1.3rem; }
+      ul.clean li { margin: 0.5rem 0; }
+      .example {
+        background: rgba(219, 39, 119, 0.08);
+        border-radius: 10px;
+        padding: 0.2rem 0.7rem;
+        font-style: italic;
+        color: #9d174d;
+      }
+      .note {
+        font-size: 0.95rem;
+        color: rgba(88, 28, 135, 0.78);
+        background: rgba(147, 51, 234, 0.06);
+        border-inline-start: 3px solid var(--brand-2);
+        padding: 0.6rem 0.9rem;
+        border-radius: 0 10px 10px 0;
+        margin: 0.8rem 0;
+      }
+
+      .cta {
+        text-align: center;
+        margin: 3rem 0 1.5rem;
+      }
+      .cta a {
+        display: inline-block;
+        background: linear-gradient(135deg, #7c3aed 0%, #9333ea 60%, #db2777 100%);
+        color: #fff;
+        text-decoration: none;
+        font-weight: 700;
+        padding: 0.85rem 2rem;
+        border-radius: 999px;
+        font-size: 1.05rem;
+        box-shadow: 0 10px 26px rgba(147, 51, 234, 0.28);
+      }
+      .cta a:hover { opacity: 0.92; }
+
+      .disclaimer {
+        background: rgba(255, 255, 255, 0.7);
+        border: 1px solid rgba(219, 39, 119, 0.25);
+        border-radius: var(--radius);
+        padding: 1.1rem 1.4rem;
+        color: rgba(88, 28, 135, 0.78);
+        font-size: 0.95rem;
+        margin-top: 2.5rem;
+        box-shadow: var(--shadow);
+      }
+      .disclaimer strong { color: #9d174d; }
+      footer {
+        text-align: center;
+        color: var(--muted);
+        font-size: 0.88rem;
+        margin-top: 2.5rem;
+        padding-top: 1.5rem;
+        border-top: 1px solid var(--border);
+      }
+      footer a { color: var(--brand-2); }
+    </style>
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Article",
+      "headline": "מדריך הלכתי — חישוב וסתות, הפסק טהרה ושבעה נקיים",
+      "inLanguage": "he",
+      "description": "מדריך הלכתי תמציתי לחישוב וסתות: מצות הפרישה, וסת קבוע ושאינו קבוע, עקירת הוסתות, וסת הדילוג, הסירוג וימי השבוע, וכן הפסק טהרה, שבעה נקיים וזמן הטבילה.",
+      "about": ["מצות הפרישה", "חישוב וסתות", "וסת קבוע", "וסת שאינו קבוע", "עקירת הוסתות", "וסת הדילוג", "הפסק טהרה", "שבעה נקיים", "זמן הטבילה"],
+      "author": { "@type": "Person", "name": "yhg" },
+      "image": "https://lgolds311-code.github.io/taharat-esther-vestot/preview.png",
+      "mainEntityOfPage": "https://lgolds311-code.github.io/taharat-esther-vestot/madrich.html",
+      "isPartOf": {
+        "@type": "WebApplication",
+        "name": "לוח טהרת אסתר",
+        "url": "https://lgolds311-code.github.io/taharat-esther-vestot/"
+      }
+    }
+    </script>
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        { "@type": "ListItem", "position": 1, "name": "לוח טהרת אסתר", "item": "https://lgolds311-code.github.io/taharat-esther-vestot/" },
+        { "@type": "ListItem", "position": 2, "name": "מדריך הלכתי", "item": "https://lgolds311-code.github.io/taharat-esther-vestot/madrich.html" }
+      ]
+    }
+    </script>
+  </head>
+  <body>
+    <div class="wrap">
+      <header class="hero">
+        <div class="logo">🌸</div>
+        <h1>מדריך הלכתי — וסתות, הפסק טהרה ושבעה נקיים</h1>
+        <p class="sub">ביאור תמציתי לדרכי החישוב שבלוח טהרת אסתר</p>
+      </header>
+
+      <nav class="toc">
+        <strong>תוכן העניינים</strong>
+        <ul>
+          <li><a href="#peticha">מצות הפרישה</a></li>
+          <li><a href="#vestot">חישוב הוסתות</a></li>
+          <li><a href="#lo-kavua">וסת שאינו קבוע</a></li>
+          <li><a href="#kavua">וסת קבוע</a></li>
+          <li><a href="#shinui">שינוי וסת קבוע</a></li>
+          <li><a href="#akira">עקירת הוסתות</a></li>
+          <li><a href="#dilug">וסתות פחות מצויות</a></li>
+          <li><a href="#hefsek">הפסק טהרה</a></li>
+          <li><a href="#nekiyim">שבעה נקיים וטבילה</a></li>
+        </ul>
+      </nav>
+
+      <section id="peticha">
+        <h2>מצות הפרישה</h2>
+        <p>
+          מן התורה צריך אדם לפרוש מאשתו סמוך לעת וסתה, שמא תראה דם בשעת תשמיש ויכשל באיסור נדה
+          החמור. וכמו שדרשו חכמים (שבועות יח ע״ב) על הפסוק "<strong>והזהרתם את בני ישראל
+          מטומאתם</strong>" — מכאן אזהרה לבני ישראל שיפרשו מנשותיהם סמוך לוסתן. ולמדנו, שלא די
+          לפרוש בשעה שכבר ראתה, אלא אף קודם לכן, בעונה שדרך הנשים לראות בה, צריך אדם להזהר ולפרוש.
+        </p>
+        <p>
+          ולפי שאין האשה רואה תמיד ביום קבוע, צריכה היא לידע ולחשב מראש את העתים שבהן עתידה
+          לראות, כדי שתדע אימתי עליה לפרוש. וזהו עיקר ענינו של החשבון המבואר להלן: לברר את ימי
+          הוסת ולזכרם, למען לא תבוא לידי מכשול. וכבר אמרו חכמים שגדול שכרו של הנזהר בקדושת ביתו
+          כראוי, וזוכה לבנים הגונים ולטהרת המשפחה בישראל.
+        </p>
+      </section>
+
+      <section id="vestot">
+        <h2>חישוב הוסתות</h2>
+        <p>
+          צריכה אשה לפרוש מבעלה בעונת וסתה, ולפיכך צריכה היא לידע מראש את הימים שעתידה לחוש
+          להם. וחשבון הוסתות נחלק לכמה חלקים, ולהלן עיקרי הדברים כפי המצוי ברוב הנשים.
+        </p>
+      </section>
+
+      <section id="lo-kavua">
+        <h2>וסת שאינו קבוע</h2>
+        <p>
+          כל אשה שראתה דם, ועדיין לא קבעה לה וסת, צריכה לחוש בחודש הבא לשלושה זמנים, ולפרוש
+          מבעלה בכל אחד מהם:
+        </p>
+        <ul class="clean">
+          <li><strong>וסת החודש</strong> — הוא אותו יום בחודש העברי שבו ראתה בחודש שעבר, וחוששת שמא תחזור ותראה בו.</li>
+          <li><strong>עונה בינונית</strong> — לרוב השיטות הוא יום השלושים לראייתה.</li>
+          <li><strong>וסת ההפלגה</strong> — הוא מנין הימים שחלפו בין הראייה הקודמת לראייה האחרונה, וחוששת שמא תפליג שוב כמנין הזה.</li>
+        </ul>
+      </section>
+
+      <section id="kavua">
+        <h2>וסת קבוע</h2>
+        <p>
+          אשה שראתה את אותו הוסת — בין וסת החודש בין וסת ההפלגה — שלוש פעמים רצופות, הרי זו
+          קובעת וסת. ומאז אינה חוששת עוד לשאר הוסתות, אלא לוסת שקבעה בלבד, וחוששת לו שלושה
+          חודשים קדימה.
+        </p>
+        <ul class="clean">
+          <li>מי שקבעה וסת הפלגה ליותר משלושים יום — חוששת אף לעונה בינונית, ויש מקילים.</li>
+          <li>
+            אין אשה קובעת וסת אלא אם כן היו כל הראיות באותה עונה — כולן ביום או כולן בלילה.
+            אבל אם ראתה פעם בלילה ופעם ביום, אינה קובעת, אלא חוששת לפי ראייתה האחרונה כוסת
+            שאינו קבוע, או כשינוי מן הקבוע.
+          </li>
+        </ul>
+      </section>
+
+      <section id="shinui">
+        <h2>שינוי וסת קבוע</h2>
+        <p>
+          מי שיש לה וסת קבוע והתחילה לשנותו — כגון שהיתה רגילה לראות בכל ח׳ לחודש, ופעם אחת
+          ראתה בט׳ — צריכה לחוש לשני התאריכים: לח׳, הואיל והוסת הקבוע עדיין לא נעקר שלוש פעמים,
+          וגם לט׳, שמא קובעת עתה וסת חדש. ולפי שהחשש לט׳ הוא כוסת שאינו קבוע, חוששת אף לוסת
+          ההפלגה מן הראייה האחרונה, שמא מתחלת לקבוע הפלגה חדשה; אבל אינה חוששת לעונה בינונית,
+          שהרי הוסת הקבוע מבטלה.
+        </p>
+        <p>
+          וכן מי שקבעה וסת להפלגה קצרה ושינתה להפלגה ארוכה — כגון שקבעה לעשרים יום ושינתה
+          לעשרים ושמונה — חוששת לעשרים וגם לעשרים ושמונה, וסופרת מן הראייה האחרונה, שהיתה
+          בעשרים ושמונה. וכן חוששת לוסת החודש לפי ראייתה האחרונה, אך אינה חוששת לעונה בינונית.
+        </p>
+        <p class="note">
+          ואם לאחר השינוי חזרה לראות בזמן הוסת הקבוע — שוב אינה צריכה לחוש לשום וסת שאינו קבוע,
+          שהרי חזרה לקביעותה.
+        </p>
+      </section>
+
+      <section id="akira">
+        <h2>עקירת הוסתות</h2>
+        <ul class="clean">
+          <li>וסת שאינו קבוע נעקר בפעם אחת, כיון שהגיע מועדו ולא ראתה בו.</li>
+          <li>אבל וסת קבוע אינו נעקר אלא לאחר שלוש פעמים שהגיע מועדו ולא ראתה בו, ואף אם לא קבעה וסת חדש.</li>
+          <li>
+            מי שקבעה וסת, ובשלושת החודשים הבאים ראתה בזמנים אחרים — נעקר הוסת הקבוע. אך הואיל
+            ולא קבעה אחר תחתיו, אם תחזור לראות בו פעם אחת — חוזרת לקביעותה. ודין זה נוהג בוסת
+            החודש ובוסת ההפלגה כאחד.
+          </li>
+        </ul>
+      </section>
+
+      <section id="dilug">
+        <h2>וסתות פחות מצויות</h2>
+
+        <h3>וסת הדילוג</h3>
+        <p>וסת הדילוג נחלקת לשני סוגים:</p>
+        <p>
+          <strong>וסת החודש בדילוג:</strong> ראתה ב-ב׳ ניסן, ג׳ אייר, ד׳ סיון — הרי קבעה וסת
+          החודש בדילוג, וצריכה לחוש ל-ה׳ תמוז, ו׳ אב, ז׳ אלול. ויש שהדילוג בן יומיים או יותר
+          (ב׳ ניסן, ד׳ אייר, ו׳ סיון), ויש דילוג הפוך (כ׳ לחודש, י״ט, י״ח).
+        </p>
+        <p class="note">
+          ויש בוסת החודש בדילוג חידוש: בפעם השלישית הרי הוא נחשב אף כוסת שאינו קבוע, ולכן חוששת
+          אף להפלגה ולעונה בינונית.
+        </p>
+        <p>
+          <strong>וסת החודש בדילוג חוזר חלילה:</strong> ראתה בדילוג של ט״ו, ט״ז, י״ז לחודש,
+          וחזר המחזור פעמיים נוספות — בסך הכל תשעה חודשים — הרי קבעה וסת החודש בדילוג חוזר
+          חלילה, כלומר למחזוריות של ט״ו–ט״ז–י״ז. וכן הדין במחזור בן חודשיים.
+        </p>
+        <p>
+          <strong>וסת ההפלגה בדילוג:</strong> ראתה בהפלגות הולכות וגדלות — לאחר עשרים וחמישה
+          יום, ואחר כך עשרים ושישה, ואחר כך עשרים ושבעה — הרי קבעה וסת הפלגה בדילוג, וצריכה
+          לחוש ל-עשרים ושמונה, עשרים ותשעה, שלושים. ואף כאן יש דילוג בן יומיים או יותר, ויש
+          דילוג הפוך (שלושים ושתים, שלושים ואחת, שלושים).
+        </p>
+
+        <h3>וסת לימי השבוע</h3>
+        <p>
+          ראתה ביום ראשון, ולאחר ארבעה שבועות — או שלושה, או חמישה וכיוצא בזה — ראתה שוב ביום
+          ראשון, וחזר הדבר שלוש פעמים — הרי קבעה וסת לימי השבוע.
+        </p>
+
+        <h3>וסת הסירוג</h3>
+        <p>
+          הרואה בתאריך קבוע, חודש רואה וחודש מדלגת — הרי זו קובעת וסת הסירוג.
+          <span class="example">כגון: ר״ח ניסן, ר״ח סיון, ר״ח אב.</span>
+        </p>
+      </section>
+
+      <section id="hefsek">
+        <h2>הפסק טהרה</h2>
+        <p>לאחר שפסקה האשה מלראות, צריכה היא לעשות הפסק טהרה.</p>
+        <h3>זמן הפסק הטהרה</h3>
+        <p>יש לעשות את הפסק הטהרה כחצי שעה קודם השקיעה.</p>
+        <h3>היום שבו פוסקת בטהרה</h3>
+        <p>
+          יכולה לפסוק בטהרה מן היום הרביעי לראיית הוסת. ויש אומרים מן היום החמישי, ויש מן היום
+          השישי, ויש הנוהגים מן היום השביעי.
+        </p>
+      </section>
+
+      <section id="nekiyim">
+        <h2>שבעה נקיים וזמן הטבילה</h2>
+        <p>
+          אם יצאה בדיקת ההפסק טהורה, מתחלת האשה למחרת לספור שבעה נקיים. ובמשך ימי השבעה נקיים
+          בודקת היא שתי בדיקות בכל יום:
+        </p>
+        <ul class="clean">
+          <li><strong>בדיקת שחרית</strong> — כשקמה בבוקר.</li>
+          <li><strong>בדיקת ערבית</strong> — כחצי שעה קודם השקיעה.</li>
+        </ul>
+        <p>
+          וביום השביעי התזכורת היא על הבדיקה, ובערב היום השביעי הוא זמן הטבילה.
+        </p>
+      </section>
+
+      <div class="cta">
+        <a href="./index.html">↩ חזרה ללוח טהרת אסתר — התחילו לחשב</a>
+      </div>
+
+      <div class="disclaimer">
+        <strong>הערה חשובה:</strong> אין מדריך זה אלא לביאור כללי של אופן החישוב בלוח בלבד, ואינו
+        פסק הלכה. ובכל שאלה למעשה יש לפנות למורה הוראה. ויתכנו מנהגים וחילוקי דעות נוספים שלא
+        נתבארו כאן.
+      </div>
+
+      <footer>
+        לוח טהרת אסתר · לע״נ אסתר בת חנה ז״ל ·
+        <a href="./index.html">לעמוד הראשי</a>
+      </footer>
+    </div>
+  </body>
+</html>
