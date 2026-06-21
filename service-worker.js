@@ -1,3 +1,4 @@
+/* טהרת אסתר - וסתות | (C) 2026 yhg | כל הזכויות שמורות | ראה קובץ LICENSE */
 const CACHE = "monthly-calendar-v12";
 const APP_SHELL = ["./", "./index.html", "./style.css", "./app.js", "./manifest.json"];
 
