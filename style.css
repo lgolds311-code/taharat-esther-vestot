@@ -2294,6 +2294,22 @@ body.theme-floral #tour-spotlight {
 .theme-choice--sage      { --choice-bg: #eef3e9; --choice-surface: rgba(255,255,255,.72); --choice-accent: #607d6d; --choice-text: #33483e; }
 .theme-choice--pearl     { --choice-bg: #effaf8; --choice-surface: rgba(255,255,255,.78); --choice-accent: #187d7a; --choice-text: #225b5d; }
 
+.theme-choice--jerusalem .theme-choice__preview {
+  background: linear-gradient(rgba(23,17,39,.12), rgba(23,17,39,.12)), url("./תמונות/lilac-gold.webp") center / cover;
+}
+.theme-choice--parchment .theme-choice__preview {
+  background: linear-gradient(rgba(255,250,242,.08), rgba(255,250,242,.08)), url("./תמונות/rose-ivory.webp") center / cover;
+}
+.theme-choice--sage .theme-choice__preview {
+  background: linear-gradient(rgba(249,252,246,.08), rgba(249,252,246,.08)), url("./תמונות/sage-cream.webp") center / cover;
+}
+.theme-choice--pearl .theme-choice__preview {
+  background: url("./תמונות/turquoise-pearl.webp") center / cover;
+}
+.theme-choice:is(.theme-choice--jerusalem, .theme-choice--parchment, .theme-choice--sage, .theme-choice--pearl) :is(.theme-choice__top, .theme-choice__days) {
+  display: none;
+}
+
 @media (max-width: 390px) {
   .theme-grid { grid-template-columns: 1fr; }
   .theme-choice {
@@ -2338,14 +2354,16 @@ body.theme-jerusalem {
   --theme-dow: rgba(201,168,93,.09);
   --theme-drawer: rgba(16,10,29,.33);
   --theme-option: #21172f;
-  background:
-    radial-gradient(circle at 92% 8%, rgba(198,154,206,.18) 0 18px, transparent 19px),
-    radial-gradient(circle at 95% 5%, rgba(214,182,111,.12) 0 42px, transparent 43px),
-    radial-gradient(circle at 7% 88%, rgba(214,182,111,.11) 0 26px, transparent 27px),
-    radial-gradient(850px 540px at 76% 4%, rgba(135, 83, 156, .25), transparent 64%),
-    radial-gradient(680px 520px at 10% 88%, rgba(168, 126, 74, .15), transparent 62%),
-    linear-gradient(155deg, #100b1d 0%, #1b142b 52%, #120d21 100%);
-  background-attachment: fixed;
+  background: var(--bg);
+}
+/* שכבת רקע קבועה — background-attachment: fixed לא נתמך ב-iOS Safari */
+body.theme-jerusalem::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: linear-gradient(rgba(18, 12, 31, .2), rgba(18, 12, 31, .2)), url("./תמונות/lilac-gold.webp") center / cover no-repeat;
 }
 
 body.theme-parchment {
@@ -2371,15 +2389,16 @@ body.theme-parchment {
   --theme-dow: rgba(168,70,102,.075);
   --theme-drawer: rgba(244, 232, 216, .76);
   --theme-option: #fff8ed;
-  background:
-    radial-gradient(circle at 94% 7%, rgba(187,101,127,.19) 0 12px, transparent 13px),
-    radial-gradient(circle at 91% 11%, rgba(205,139,156,.14) 0 25px, transparent 26px),
-    radial-gradient(circle at 4% 92%, rgba(168,70,102,.12) 0 18px, transparent 19px),
-    radial-gradient(740px 480px at 86% 5%, rgba(226, 182, 190, .28), transparent 62%),
-    radial-gradient(620px 420px at 8% 92%, rgba(193, 157, 120, .19), transparent 60%),
-    repeating-linear-gradient(0deg, rgba(105,79,50,.018) 0 1px, transparent 1px 4px),
-    linear-gradient(145deg, #fbf5e9 0%, #f7eddf 52%, #fff8ee 100%);
-  background-attachment: fixed;
+  background: var(--bg);
+}
+/* שכבת רקע קבועה — background-attachment: fixed לא נתמך ב-iOS Safari */
+body.theme-parchment::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: linear-gradient(rgba(255, 250, 242, .14), rgba(255, 250, 242, .14)), url("./תמונות/rose-ivory.webp") center / cover no-repeat;
 }
 
 body.theme-sage {
@@ -2405,14 +2424,16 @@ body.theme-sage {
   --theme-dow: rgba(96,125,109,.09);
   --theme-drawer: rgba(231, 239, 225, .8);
   --theme-option: #f5f9f1;
-  background:
-    radial-gradient(ellipse at 94% 9%, rgba(96,125,109,.16) 0 10px, transparent 11px),
-    radial-gradient(ellipse at 89% 5%, rgba(166,111,125,.12) 0 16px, transparent 17px),
-    radial-gradient(ellipse at 7% 91%, rgba(96,125,109,.12) 0 14px, transparent 15px),
-    radial-gradient(760px 500px at 82% 7%, rgba(190, 211, 181, .4), transparent 63%),
-    radial-gradient(650px 460px at 8% 90%, rgba(225, 190, 198, .24), transparent 60%),
-    linear-gradient(150deg, #f5f7ef 0%, #eaf1e5 54%, #f8f5ed 100%);
-  background-attachment: fixed;
+  background: var(--bg);
+}
+/* שכבת רקע קבועה — background-attachment: fixed לא נתמך ב-iOS Safari */
+body.theme-sage::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: linear-gradient(rgba(249, 252, 246, .12), rgba(249, 252, 246, .12)), url("./תמונות/sage-cream.webp") center / cover no-repeat;
 }
 
 body.theme-pearl {
@@ -2438,13 +2459,16 @@ body.theme-pearl {
   --theme-dow: rgba(24,125,122,.08);
   --theme-drawer: rgba(226, 244, 240, .78);
   --theme-option: #f0fbf9;
-  background:
-    radial-gradient(circle at 92% 9%, rgba(255,255,255,.88) 0 14px, rgba(24,125,122,.08) 15px 17px, transparent 18px),
-    radial-gradient(circle at 5% 92%, rgba(164,95,120,.1) 0 20px, transparent 21px),
-    radial-gradient(800px 520px at 78% 4%, rgba(155, 222, 214, .34), transparent 62%),
-    radial-gradient(650px 460px at 6% 91%, rgba(228, 186, 203, .23), transparent 60%),
-    linear-gradient(145deg, #f6fffd 0%, #eaf8f5 52%, #f8f4f7 100%);
-  background-attachment: fixed;
+  background: var(--bg);
+}
+/* שכבת רקע קבועה — background-attachment: fixed לא נתמך ב-iOS Safari */
+body.theme-pearl::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: linear-gradient(rgba(248, 254, 253, .08), rgba(248, 254, 253, .08)), url("./תמונות/turquoise-pearl.webp") center / cover no-repeat;
 }
 
 body:is(.theme-jerusalem, .theme-parchment, .theme-sage, .theme-pearl) .title {

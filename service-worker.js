@@ -1,6 +1,10 @@
 /* טהרת אסתר - וסתות | (C) 2026 yhg | כל הזכויות שמורות | ראה קובץ LICENSE */
-const CACHE = "monthly-calendar-v14";
-const APP_SHELL = ["./", "./index.html", "./style.css", "./app.js", "./manifest.json"];
+const CACHE = "monthly-calendar-v15";
+const APP_SHELL = [
+  "./", "./index.html", "./style.css", "./app.js", "./manifest.json",
+  "./תמונות/lilac-gold.webp", "./תמונות/rose-ivory.webp",
+  "./תמונות/sage-cream.webp", "./תמונות/turquoise-pearl.webp",
+];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
