@@ -1,0 +1,428 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>שאלות ותשובות — לוח טהרה, חישוב וסתות, הפסק טהרה וזמן טבילה | טהרת אסתר</title>
+    <meta name="description" content="תשובות לשאלות נפוצות: מה זה לוח טהרה דיגיטלי, איך מחשבים עונה בינונית ווסת הפלגה, מאיזה יום עושים הפסק טהרה, כמה בדיקות בשבעה נקיים, מתי זמן הטבילה במקווה, ואיך מתקינים את הלוח בטלפון." />
+    <meta name="keywords" content="לוח טהרה, לוח טהרה דיגיטלי, מחשבון טהרה, מחשבון וסתות, חישוב וסתות, עונה בינונית, וסת הפלגה, הפסק טהרה, שבעה נקיים, זמן טבילה, מחשבון טבילה במקווה, לוח טהרה להורדה, שאלות ותשובות" />
+    <meta name="author" content="yhg" />
+    <link rel="canonical" href="https://lgolds311-code.github.io/taharat-esther-vestot/faq.html" />
+    <meta property="og:title" content="שאלות ותשובות — לוח טהרה דיגיטלי, וסתות, הפסק טהרה וטבילה" />
+    <meta property="og:description" content="תשובות קצרות לשאלות הנפוצות על חישוב וסתות, הפסק טהרה, שבעה נקיים, זמן טבילה, פרטיות והתקנה — נלווה ללוח טהרת אסתר." />
+    <meta property="og:type" content="article" />
+    <meta property="og:url" content="https://lgolds311-code.github.io/taharat-esther-vestot/faq.html" />
+    <meta property="og:locale" content="he_IL" />
+    <meta property="og:image" content="https://lgolds311-code.github.io/taharat-esther-vestot/preview.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta name="theme-color" content="#fdf4ff" />
+    <link rel="icon" href="./icon.svg" type="image/svg+xml" />
+    <style>
+      :root {
+        --card: rgba(255, 255, 255, 0.88);
+        --border: rgba(147, 51, 234, 0.18);
+        --brand: #9333ea;
+        --brand-2: #7c3aed;
+        --accent: #db2777;
+        --text: #2d0050;
+        --muted: rgba(88, 28, 135, 0.6);
+        --shadow: 0 18px 44px rgba(147, 51, 234, 0.12);
+        --radius: 16px;
+      }
+      * { box-sizing: border-box; }
+      html { scroll-behavior: smooth; }
+      body {
+        margin: 0;
+        color-scheme: light;
+        font-family: "Segoe UI", "Heebo", system-ui, -apple-system, Arial, sans-serif;
+        color: var(--text);
+        line-height: 1.85;
+        background:
+          radial-gradient(900px 600px at 75% 5%,  rgba(216, 180, 254, 0.55), transparent 60%),
+          radial-gradient(700px 500px at 15% 85%, rgba(196, 181, 253, 0.45), transparent 55%),
+          radial-gradient(500px 400px at 50% 50%, rgba(251, 207, 232, 0.30), transparent 60%),
+          linear-gradient(180deg, #fce7ff 0%, #fdf4ff 55%, #f5f3ff 100%);
+        background-attachment: fixed;
+        min-height: 100vh;
+      }
+      .wrap { max-width: 820px; margin: 0 auto; padding: 2.4rem 1.25rem 4rem; }
+
+      header.hero {
+        text-align: center;
+        padding: 1.5rem 0 1.2rem;
+        border-bottom: 1px solid var(--border);
+        margin-bottom: 2rem;
+      }
+      .hero .logo {
+        display: inline-flex;
+        font-size: 2rem;
+        line-height: 1;
+        padding: 0.55rem;
+        border-radius: 14px;
+        background: rgba(147, 51, 234, 0.1);
+        border: 1px solid rgba(147, 51, 234, 0.25);
+      }
+      h1 {
+        font-size: clamp(1.5rem, 4.5vw, 2.1rem);
+        margin: 0.7rem 0 0.4rem;
+        background: linear-gradient(135deg, #7c3aed 0%, #9333ea 60%, #db2777 100%);
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+        line-height: 1.3;
+      }
+      .hero p.sub { color: var(--muted); margin: 0.2rem 0 0; font-size: 1rem; }
+
+      .intro {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 1.2rem 1.4rem;
+        margin-bottom: 2rem;
+        font-size: 1.02rem;
+        box-shadow: var(--shadow);
+      }
+
+      nav.toc {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 1rem 1.4rem;
+        margin-bottom: 2.4rem;
+        box-shadow: var(--shadow);
+      }
+      nav.toc strong { color: var(--brand); display: block; margin-bottom: 0.5rem; }
+      nav.toc ul { margin: 0; padding-inline-start: 1.2rem; columns: 2; }
+      nav.toc li { margin: 0.25rem 0; }
+      nav.toc a { color: var(--brand-2); text-decoration: none; }
+      nav.toc a:hover { color: var(--accent); text-decoration: underline; }
+
+      section { margin-bottom: 2.6rem; }
+      h2 {
+        font-size: 1.4rem;
+        color: var(--brand);
+        border-inline-start: 4px solid var(--brand);
+        padding-inline-start: 0.7rem;
+        margin: 2rem 0 0.9rem;
+      }
+      h3 {
+        font-size: 1.1rem;
+        color: var(--brand-2);
+        margin: 1.4rem 0 0.4rem;
+      }
+      p { margin: 0.7rem 0; }
+      strong { color: #5b21b6; }
+      ul.clean { padding-inline-start: 1.3rem; }
+      ul.clean li { margin: 0.5rem 0; }
+      .example {
+        background: rgba(219, 39, 119, 0.08);
+        border-radius: 10px;
+        padding: 0.2rem 0.7rem;
+        font-style: italic;
+        color: #9d174d;
+      }
+      .note {
+        font-size: 0.95rem;
+        color: rgba(88, 28, 135, 0.78);
+        background: rgba(147, 51, 234, 0.06);
+        border-inline-start: 3px solid var(--brand-2);
+        padding: 0.6rem 0.9rem;
+        border-radius: 0 10px 10px 0;
+        margin: 0.8rem 0;
+      }
+
+      .cta {
+        text-align: center;
+        margin: 3rem 0 1.5rem;
+      }
+      .cta a {
+        display: inline-block;
+        background: linear-gradient(135deg, #7c3aed 0%, #9333ea 60%, #db2777 100%);
+        color: #fff;
+        text-decoration: none;
+        font-weight: 700;
+        padding: 0.85rem 2rem;
+        border-radius: 999px;
+        font-size: 1.05rem;
+        box-shadow: 0 10px 26px rgba(147, 51, 234, 0.28);
+      }
+      .cta a:hover { opacity: 0.92; }
+
+      .disclaimer {
+        background: rgba(255, 255, 255, 0.7);
+        border: 1px solid rgba(219, 39, 119, 0.25);
+        border-radius: var(--radius);
+        padding: 1.1rem 1.4rem;
+        color: rgba(88, 28, 135, 0.78);
+        font-size: 0.95rem;
+        margin-top: 2.5rem;
+        box-shadow: var(--shadow);
+      }
+      .disclaimer strong { color: #9d174d; }
+      footer {
+        text-align: center;
+        color: var(--muted);
+        font-size: 0.88rem;
+        margin-top: 2.5rem;
+        padding-top: 1.5rem;
+        border-top: 1px solid var(--border);
+      }
+      footer a, section p a { color: var(--brand-2); font-weight: 600; }
+    
+      .faq {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        box-shadow: var(--shadow);
+        margin: 0.9rem 0;
+        padding: 0 1.4rem;
+      }
+      .faq summary {
+        list-style: none;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 0.8rem;
+        padding: 1rem 0;
+      }
+      .faq summary::-webkit-details-marker { display: none; }
+      .faq summary::before {
+        content: "+";
+        flex: 0 0 1.7rem;
+        height: 1.7rem;
+        border-radius: 50%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, #7c3aed, #db2777);
+        color: #fff;
+        font-weight: 700;
+        font-size: 1.1rem;
+        line-height: 1;
+      }
+      .faq[open] summary::before { content: "−"; }
+      .faq summary h2 {
+        margin: 0;
+        padding: 0;
+        border: 0;
+        font-size: 1.08rem;
+        color: var(--text);
+      }
+      .faq__a { padding: 0 0 1.1rem 2.5rem; }
+      .faq__a p { margin: 0; }
+      .faq__a a { color: var(--brand-2); font-weight: 600; }
+    </style>
+    <script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "inLanguage": "he",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "מה זה לוח טהרה דיגיטלי ומה הוא מחשב?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "לוח טהרה דיגיטלי הוא אפליקציה שמחליפה את החישוב הידני של ימי הפרישה. לוח טהרת אסתר מחשב אוטומטית את כל עונות הפרישה לפי ההלכה — וסת החודש, עונה בינונית, יום הבינוני ווסת ההפלגה — וכן וסת קבוע ושאינו קבוע, וסת הדילוג ועקירת וסתות. בנוסף הוא מסמן את יום ההפסק טהרה, סופר את השבעה נקיים עם תזכורות לבדיקות, ומציג את ליל הטבילה במקווה. הלוח חינמי, פרטי, ועובד גם ללא אינטרנט."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "מה ההבדל בין וסת קבוע לוסת שאינו קבוע?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "אשה שראתה דם ועדיין לא קבעה וסת — חוששת בחודש הבא לשלושה זמנים: וסת החודש (אותו יום בחודש העברי), עונה בינונית (לרוב השיטות יום השלושים לראייה), ווסת ההפלגה (מנין הימים שבין הראייה הקודמת לאחרונה). אשה שראתה את אותו הוסת שלוש פעמים רצופות קובעת וסת קבוע, ומאז חוששת לוסת שקבעה בלבד ולא לשאר הוסתות. הלוח מזהה אוטומטית קביעת וסת ומעדכן את ימי הפרישה בהתאם."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "איך מחשבים עונה בינונית?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "עונה בינונית היא, לרוב השיטות, יום השלושים מיום הראייה הקודמת (כשיום הראייה נמנה כיום הראשון). יש שיטות שחוששות גם ליום ל״א. הלוח מחשב את העונה הבינונית אוטומטית מכל ראייה שמסמנים בו, ומאפשר לבחור בהגדרות את השיטה שלפיה נוהגים."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "מה זה וסת ההפלגה?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "וסת ההפלגה הוא מספר הימים שחלפו בין הראייה הקודמת לראייה האחרונה. לדוגמה: אם בין שתי הראיות האחרונות עברו 28 ימים, חוששת שמא תראה שוב לאחר 28 ימים מהראייה האחרונה. אם הפלגה זהה חזרה שלוש פעמים — נקבעה וסת הפלגה קבועה. הלוח מחשב את ההפלגה מכל צמד ראיות ומסמן את יום החשש בלוח."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "מאיזה יום אפשר לעשות הפסק טהרה?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "לאחר שפסקה מלראות עושים הפסק טהרה. יש אומרים שאפשר לפסוק בטהרה מהיום הרביעי לראיית הוסת, ויש מהיום החמישי, ויש מהשישי ויש הנוהגים מהשביעי — לפי מנהג הקהילה ופסק מורה ההוראה. הפסק הטהרה נעשה כחצי שעה קודם השקיעה. בלוח ניתן להגדיר מאיזה יום נוהגים לפסוק בטהרה, והוא יסמן את היום המתאים ויתזכר בזמן."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "כמה בדיקות עושים בשבעה נקיים ומתי?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "אם בדיקת ההפסק טהרה יצאה טהורה, מתחילים למחרת לספור שבעה נקיים. במשך שבעת הימים בודקים שתי בדיקות בכל יום: בדיקת שחרית כשקמים בבוקר, ובדיקת ערבית כחצי שעה קודם השקיעה. הלוח יכול לשלוח תזכורת לכל בדיקה, לפי זמני השקיעה במקום המגורים."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "מתי זמן הטבילה במקווה?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "זמן הטבילה במקווה הוא בערב שלאחר היום השביעי של השבעה נקיים. הלוח מחשב את ליל הטבילה אוטומטית מיום ההפסק טהרה, מציג אותו בלוח ומאפשר להגדיר תזכורת מראש."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "מה עושים כשיש ספק בצבע הבדיקה?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "כל ספק בבדיקה — האם הצבע טהור או לא — צריך להתייעץ עם מורה הוראה מוסמך לתחום זה. הלוח אינו מחליף פסק הלכה. בלשונית \"צור קשר\" בלוח יש קישור למציאת מורה הוראה מוסמך באיזורכם."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "האם הנתונים שלי נשמרים בשרת? מי יכול לראות אותם?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "לא. כל הנתונים — הראיות, ההגדרות והתזכורות — נשמרים אך ורק במכשיר שלכם (בדפדפן), ואינם נשלחים לשום שרת. אין הרשמה, אין חשבון ואין איסוף מידע אישי. ניתן לייצא גיבוי לקובץ ולייבא אותו במכשיר אחר. פירוט מלא במדיניות הפרטיות."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "איך מורידים ומתקינים את הלוח בטלפון?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "לוח טהרת אסתר הוא אפליקציית ווב (PWA) שמתקינים ישירות מהדפדפן, ללא חנות אפליקציות. באנדרואיד: לחצו על הכפתור \"התקנה במכשיר\" בעמוד הראשי, או על \"התקנת אפליקציה\" בתפריט הדפדפן. באייפון: פתחו את הלוח בספארי, לחצו על כפתור השיתוף ובחרו \"הוספה למסך הבית\". לאחר ההתקנה הלוח נפתח כמו כל אפליקציה ועובד גם ללא אינטרנט."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "האם הלוח מתאים לכל המנהגים והשיטות?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "כן. הלוח מאפשר לבחור בהגדרות את השיטה לפיה נוהגים בכל אחד מהחישובים: יום ההפסק טהרה, עונה בינונית (יום ל׳ או ל״א), עונת אור זרוע, אופן חישוב ההפלגות ועוד — כך שהוא מתאים לקהילות אשכנז, ספרד וכל המנהגים. בכל שאלה למעשה יש לפנות למורה הוראה."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "איך הלוח מטפל בגלולות ובדילוג על מחזור?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "בלשונית \"גלולות\" בהגדרות ניתן לסמן יום הפסקת גלולות בלוח. הלוח מסמן אוטומטית את יום החשש הנובע מהפסקת הגלולות, לצד שאר עונות הפרישה. בכל מקרה של שינוי הורמונלי או מחזור לא סדיר מומלץ להתייעץ עם מורה הוראה."
+      }
+    }
+  ]
+}
+    </script>
+    <script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position": 1,
+      "name": "לוח טהרת אסתר",
+      "item": "https://lgolds311-code.github.io/taharat-esther-vestot/"
+    },
+    {
+      "@type": "ListItem",
+      "position": 2,
+      "name": "שאלות ותשובות",
+      "item": "https://lgolds311-code.github.io/taharat-esther-vestot/faq.html"
+    }
+  ]
+}
+    </script>
+  </head>
+  <body>
+    <div class="wrap">
+      <header class="hero">
+        <div class="logo">💬</div>
+        <h1>שאלות ותשובות נפוצות</h1>
+        <p class="sub">על לוח הטהרה הדיגיטלי, חישוב הוסתות, הפסק טהרה, שבעה נקיים וזמן הטבילה</p>
+      </header>
+
+      <details class="faq" id="q1">
+        <summary><h2>מה זה לוח טהרה דיגיטלי ומה הוא מחשב?</h2></summary>
+        <div class="faq__a"><p>לוח טהרה דיגיטלי הוא אפליקציה שמחליפה את החישוב הידני של ימי הפרישה. לוח טהרת אסתר מחשב אוטומטית את כל עונות הפרישה לפי ההלכה — וסת החודש, עונה בינונית, יום הבינוני ווסת ההפלגה — וכן וסת קבוע ושאינו קבוע, וסת הדילוג ועקירת וסתות. בנוסף הוא מסמן את יום ההפסק טהרה, סופר את השבעה נקיים עם תזכורות לבדיקות, ומציג את ליל הטבילה במקווה. הלוח חינמי, פרטי, ועובד גם ללא אינטרנט.</p></div>
+      </details>
+
+      <details class="faq" id="q2">
+        <summary><h2>מה ההבדל בין וסת קבוע לוסת שאינו קבוע?</h2></summary>
+        <div class="faq__a"><p>אשה שראתה דם ועדיין לא קבעה וסת — חוששת בחודש הבא לשלושה זמנים: וסת החודש (אותו יום בחודש העברי), עונה בינונית (לרוב השיטות יום השלושים לראייה), ווסת ההפלגה (מנין הימים שבין הראייה הקודמת לאחרונה). אשה שראתה את אותו הוסת שלוש פעמים רצופות קובעת וסת קבוע, ומאז חוששת לוסת שקבעה בלבד ולא לשאר הוסתות. הלוח מזהה אוטומטית קביעת וסת ומעדכן את ימי הפרישה בהתאם.</p></div>
+      </details>
+
+      <details class="faq" id="q3">
+        <summary><h2>איך מחשבים עונה בינונית?</h2></summary>
+        <div class="faq__a"><p>עונה בינונית היא, לרוב השיטות, יום השלושים מיום הראייה הקודמת (כשיום הראייה נמנה כיום הראשון). יש שיטות שחוששות גם ליום ל״א. הלוח מחשב את העונה הבינונית אוטומטית מכל ראייה שמסמנים בו, ומאפשר לבחור בהגדרות את השיטה שלפיה נוהגים.</p></div>
+      </details>
+
+      <details class="faq" id="q4">
+        <summary><h2>מה זה וסת ההפלגה?</h2></summary>
+        <div class="faq__a"><p>וסת ההפלגה הוא מספר הימים שחלפו בין הראייה הקודמת לראייה האחרונה. לדוגמה: אם בין שתי הראיות האחרונות עברו 28 ימים, חוששת שמא תראה שוב לאחר 28 ימים מהראייה האחרונה. אם הפלגה זהה חזרה שלוש פעמים — נקבעה וסת הפלגה קבועה. הלוח מחשב את ההפלגה מכל צמד ראיות ומסמן את יום החשש בלוח.</p></div>
+      </details>
+
+      <details class="faq" id="q5">
+        <summary><h2>מאיזה יום אפשר לעשות הפסק טהרה?</h2></summary>
+        <div class="faq__a"><p>לאחר שפסקה מלראות עושים הפסק טהרה. יש אומרים שאפשר לפסוק בטהרה מהיום הרביעי לראיית הוסת, ויש מהיום החמישי, ויש מהשישי ויש הנוהגים מהשביעי — לפי מנהג הקהילה ופסק מורה ההוראה. הפסק הטהרה נעשה כחצי שעה קודם השקיעה. בלוח ניתן להגדיר מאיזה יום נוהגים לפסוק בטהרה, והוא יסמן את היום המתאים ויתזכר בזמן.</p></div>
+      </details>
+
+      <details class="faq" id="q6">
+        <summary><h2>כמה בדיקות עושים בשבעה נקיים ומתי?</h2></summary>
+        <div class="faq__a"><p>אם בדיקת ההפסק טהרה יצאה טהורה, מתחילים למחרת לספור שבעה נקיים. במשך שבעת הימים בודקים שתי בדיקות בכל יום: בדיקת שחרית כשקמים בבוקר, ובדיקת ערבית כחצי שעה קודם השקיעה. הלוח יכול לשלוח תזכורת לכל בדיקה, לפי זמני השקיעה במקום המגורים.</p></div>
+      </details>
+
+      <details class="faq" id="q7">
+        <summary><h2>מתי זמן הטבילה במקווה?</h2></summary>
+        <div class="faq__a"><p>זמן הטבילה במקווה הוא בערב שלאחר היום השביעי של השבעה נקיים. הלוח מחשב את ליל הטבילה אוטומטית מיום ההפסק טהרה, מציג אותו בלוח ומאפשר להגדיר תזכורת מראש.</p></div>
+      </details>
+
+      <details class="faq" id="q8">
+        <summary><h2>מה עושים כשיש ספק בצבע הבדיקה?</h2></summary>
+        <div class="faq__a"><p>כל ספק בבדיקה — האם הצבע טהור או לא — צריך להתייעץ עם מורה הוראה מוסמך לתחום זה. הלוח אינו מחליף פסק הלכה. בלשונית "צור קשר" בלוח יש קישור למציאת מורה הוראה מוסמך באיזורכם.</p></div>
+      </details>
+
+      <details class="faq" id="q9">
+        <summary><h2>האם הנתונים שלי נשמרים בשרת? מי יכול לראות אותם?</h2></summary>
+        <div class="faq__a"><p>לא. כל הנתונים — הראיות, ההגדרות והתזכורות — נשמרים אך ורק במכשיר שלכם (בדפדפן), ואינם נשלחים לשום שרת. אין הרשמה, אין חשבון ואין איסוף מידע אישי. ניתן לייצא גיבוי לקובץ ולייבא אותו במכשיר אחר. פירוט מלא במדיניות הפרטיות.</p></div>
+      </details>
+
+      <details class="faq" id="q10">
+        <summary><h2>איך מורידים ומתקינים את הלוח בטלפון?</h2></summary>
+        <div class="faq__a"><p>לוח טהרת אסתר הוא אפליקציית ווב (PWA) שמתקינים ישירות מהדפדפן, ללא חנות אפליקציות. באנדרואיד: לחצו על הכפתור "התקנה במכשיר" בעמוד הראשי, או על "התקנת אפליקציה" בתפריט הדפדפן. באייפון: פתחו את הלוח בספארי, לחצו על כפתור השיתוף ובחרו "הוספה למסך הבית". לאחר ההתקנה הלוח נפתח כמו כל אפליקציה ועובד גם ללא אינטרנט.</p></div>
+      </details>
+
+      <details class="faq" id="q11">
+        <summary><h2>האם הלוח מתאים לכל המנהגים והשיטות?</h2></summary>
+        <div class="faq__a"><p>כן. הלוח מאפשר לבחור בהגדרות את השיטה לפיה נוהגים בכל אחד מהחישובים: יום ההפסק טהרה, עונה בינונית (יום ל׳ או ל״א), עונת אור זרוע, אופן חישוב ההפלגות ועוד — כך שהוא מתאים לקהילות אשכנז, ספרד וכל המנהגים. בכל שאלה למעשה יש לפנות למורה הוראה.</p></div>
+      </details>
+
+      <details class="faq" id="q12">
+        <summary><h2>איך הלוח מטפל בגלולות ובדילוג על מחזור?</h2></summary>
+        <div class="faq__a"><p>בלשונית "גלולות" בהגדרות ניתן לסמן יום הפסקת גלולות בלוח. הלוח מסמן אוטומטית את יום החשש הנובע מהפסקת הגלולות, לצד שאר עונות הפרישה. בכל מקרה של שינוי הורמונלי או מחזור לא סדיר מומלץ להתייעץ עם מורה הוראה.</p></div>
+      </details>
+
+      <div class="cta">
+        <a href="./index.html">↩ ללוח טהרת אסתר — התחילו לחשב</a>
+      </div>
+
+      <div class="disclaimer">
+        <strong>הערה חשובה:</strong> התשובות כאן הן ביאור כללי לאופן החישוב בלוח בלבד, ואינן פסק
+        הלכה. בכל שאלה למעשה יש לפנות למורה הוראה. ויתכנו מנהגים וחילוקי דעות נוספים שלא
+        נתבארו כאן. להרחבה ראו את <a href="./madrich.html">המדריך ההלכתי המלא</a>.
+      </div>
+
+      <footer>
+        לוח טהרת אסתר · לע״נ אסתר בת חנה ז״ל ·
+        <a href="./index.html">לעמוד הראשי</a> ·
+        <a href="./madrich.html">מדריך הלכתי</a> ·
+        <a href="./privacy.html">מדיניות פרטיות</a>
+      </footer>
+    </div>
+  </body>
+</html>

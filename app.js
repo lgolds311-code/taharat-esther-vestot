@@ -31,7 +31,7 @@ const els = {
   multiHaflagahToggle:   document.querySelector("#multi-haflagah-toggle"),
   sightingEndToggle:     document.querySelector("#sighting-end-toggle"),
   weekdayVesetToggle:    document.querySelector("#weekday-veset-toggle"),
-  themeSelect:             document.querySelector("#theme-select"),
+  themeChoices:            document.querySelectorAll("[data-theme-choice]"),
   fixedHaflagahSelect:     document.querySelector("#fixed-haflagah-select"),
   notificationsToggle:  document.querySelector("#notifications-toggle"),
   ozScopeRow:           document.querySelector("#oz-scope-row"),
@@ -418,10 +418,26 @@ function saveSettings(s) {
   saveJson(STORAGE.settings, s);
 }
 
-/** החלת ערכת נושא על ה-body */
+const THEMES = ["dark", "light", "floral", "jerusalem", "parchment", "sage", "pearl"];
+const THEME_COLORS = {
+  dark: "#130a1e", light: "#fdf4ff", floral: "#fff8f4", jerusalem: "#171127",
+  parchment: "#f8f0e2", sage: "#eef3e9", pearl: "#effaf8",
+};
+
+function normalizeTheme(theme) {
+  return THEMES.includes(theme) ? theme : DEFAULT_SETTINGS.theme;
+}
+
+/** החלת ערכת נושא על ה-body וסנכרון גלריית הבחירה */
 function applyTheme(theme) {
-  document.body.classList.remove("theme-light", "theme-floral");
-  if (theme && theme !== "dark") document.body.classList.add(`theme-${theme}`);
+  const selectedTheme = normalizeTheme(theme);
+  document.body.classList.remove(...THEMES.filter((name) => name !== "dark").map((name) => `theme-${name}`));
+  if (selectedTheme !== "dark") document.body.classList.add(`theme-${selectedTheme}`);
+  els.themeChoices?.forEach((choice) => {
+    choice.setAttribute("aria-pressed", String(choice.dataset.themeChoice === selectedTheme));
+  });
+  document.querySelector('meta[name="theme-color"]')?.setAttribute("content", THEME_COLORS[selectedTheme]);
+  return selectedTheme;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -2306,8 +2322,7 @@ els.importBackupFile?.addEventListener("change", (e) => {
       if (!data || typeof data !== "object") throw new Error("פורמט לא תקין");
       if (data.entries)  { state.entries  = data.entries;  saveJson(STORAGE.entries, state.entries); }
       if (data.settings) { state.settings = { ...loadSettings(), ...data.settings }; saveSettings(state.settings); }
-      applyTheme(state.settings.theme || "light");
-      if (els.themeSelect) els.themeSelect.value = state.settings.theme || "light";
+      state.settings.theme = applyTheme(state.settings.theme || "light");
       renderMonth();
       alert("הנתונים שוחזרו בהצלחה.");
     } catch {
@@ -3005,11 +3020,11 @@ document.getElementById("contact-form")?.addEventListener("submit", async (e) =>
 });
 
 // בחירת ערכת נושא
-els.themeSelect?.addEventListener("change", (e) => {
-  const theme = e.target.value;
-  state.settings.theme = theme;
-  saveSettings(state.settings);
-  applyTheme(theme);
+els.themeChoices?.forEach((choice) => {
+  choice.addEventListener("click", () => {
+    state.settings.theme = applyTheme(choice.dataset.themeChoice);
+    saveSettings(state.settings);
+  });
 });
 
 // ── QR ──
@@ -3136,8 +3151,7 @@ if (els.pillsInterval) els.pillsInterval.value = state.settings.pillsInterval ??
 if (els.pillsTod)      els.pillsTod.value      = state.settings.pillsTod      || "day";
 
 // החל ערכת נושא שמורה
-applyTheme(state.settings.theme || "light");
-if (els.themeSelect) els.themeSelect.value = state.settings.theme || "light";
+state.settings.theme = applyTheme(state.settings.theme || "light");
 
 // הצג סטטוס מיקום
 const initLoc = loadLocation();
@@ -3153,6 +3167,50 @@ if (els.citySelect && initLoc) {
     }
   }
 }
+
+// ── התקנה במכשיר (PWA) ──
+(function setupInstall() {
+  const btn  = document.getElementById("install-btn");
+  const hint = document.getElementById("install-hint");
+  if (!btn) return;
+
+  const isStandalone = window.matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
+  const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent) && !window.MSStream;
+  let deferredPrompt = null;
+
+  const showHint = (text) => { if (hint) { hint.textContent = text; hint.hidden = false; } };
+
+  if (isStandalone) {
+    btn.hidden = true;
+    showHint("✅ האפליקציה כבר מותקנת במכשיר זה.");
+    return;
+  }
+
+  window.addEventListener("beforeinstallprompt", (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+  });
+
+  window.addEventListener("appinstalled", () => {
+    deferredPrompt = null;
+    btn.hidden = true;
+    showHint("✅ האפליקציה הותקנה בהצלחה! חפשו אותה במסך הבית.");
+  });
+
+  btn.addEventListener("click", async () => {
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      await deferredPrompt.userChoice.catch(() => {});
+      deferredPrompt = null;
+      return;
+    }
+    if (isIOS) {
+      showHint("באייפון: לחצו על כפתור השיתוף (הריבוע עם החץ) בתחתית ספארי, ובחרו \"הוספה למסך הבית\".");
+    } else {
+      showHint("בדפדפן: פתחו את תפריט הדפדפן (⋮) ובחרו \"התקנת אפליקציה\" או \"הוספה למסך הבית\".");
+    }
+  });
+})();
 
 if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register("./service-worker.js").then((reg) => {
