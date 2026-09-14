@@ -1320,6 +1320,39 @@ input[type="time"] {
   align-items: center;
 }
 
+/* ── קישורים בלשונית צור קשר ── */
+.contact-links {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.contact-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 14px;
+  border-radius: var(--radius-sm);
+  background: var(--panel);
+  border: 1px solid var(--border);
+  color: var(--text);
+  text-decoration: none;
+  font-size: 13px;
+  line-height: 1.4;
+  transition: border-color 0.15s, background 0.15s;
+}
+.contact-link:hover {
+  border-color: var(--brand);
+  background: rgba(217, 70, 239, 0.1);
+}
+.contact-link__icon {
+  font-size: 18px;
+  flex-shrink: 0;
+}
+.contact-link strong {
+  color: var(--brand);
+  font-weight: 700;
+}
+
 /* ── טופס צור קשר ── */
 .contact-intro {
   padding: 2px 4px 6px;

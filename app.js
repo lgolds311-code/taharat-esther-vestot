@@ -2947,6 +2947,19 @@ document.querySelectorAll(".tab-btn[data-tab]").forEach(btn => {
   });
 });
 
+// פתיחת לשונית ישירות מקישור חיצוני (למשל index.html#contact מתוך המדריך)
+function openTabFromHash() {
+  const tab = location.hash.replace(/^#/, "");
+  if (!tab) return;
+  const btn = document.querySelector(`.tab-btn[data-tab="${tab}"]`);
+  if (!btn) return;
+  openSettings();
+  btn.click();
+  history.replaceState(null, "", location.pathname + location.search);
+}
+openTabFromHash();
+window.addEventListener("hashchange", openTabFromHash);
+
 // ── טופס צור קשר ──
 document.getElementById("contact-form")?.addEventListener("submit", async (e) => {
   e.preventDefault();
