@@ -1,5 +1,5 @@
 /* טהרת אסתר - וסתות | (C) 2026 yhg | כל הזכויות שמורות | ראה קובץ LICENSE */
-const CACHE = "monthly-calendar-v15";
+const CACHE = "monthly-calendar-v16";
 const APP_SHELL = [
   "./", "./index.html", "./style.css", "./app.js", "./manifest.json",
   "./תמונות/lilac-gold.webp", "./תמונות/rose-ivory.webp",
@@ -29,6 +29,8 @@ self.addEventListener("message", (event) => {
 self.addEventListener("fetch", (event) => {
   const { request } = event;
   if (request.method !== "GET") return;
+  // סרטונים — ישירות מהרשת, בלי מטמון (קבצים גדולים ובקשות טווח)
+  if (/\.(mp4|webm)(\?|$)/i.test(request.url)) return;
 
   let isSameOrigin = false;
   try { isSameOrigin = new URL(request.url).origin === self.location.origin; } catch {}

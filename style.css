@@ -1601,6 +1601,21 @@ input[type="time"] {
   line-height: 1.55;
   color: var(--muted);
 }
+.about__video {
+  margin-top: 20px;
+  padding-top: 18px;
+  border-top: 1px solid var(--border);
+}
+.about__video-player {
+  display: block;
+  width: 100%;
+  max-width: 720px;
+  aspect-ratio: 16 / 9;
+  margin: 12px auto 0;
+  border-radius: 14px;
+  background: #1e0b33;
+  box-shadow: 0 10px 28px rgba(76, 29, 149, 0.22);
+}
 .about__install {
   display: flex;
   align-items: center;

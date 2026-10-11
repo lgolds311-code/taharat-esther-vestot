@@ -3337,7 +3337,7 @@ function _tourShowStep() {
 
   titleEl.textContent = step.title;
   textEl.textContent  = step.text;
-  counter.textContent = `${_tourStep + 1} / ${TOUR_STEPS.length}`;
+  counter.textContent = `${_tourStep + 1} מתוך ${TOUR_STEPS.length}`;
   prevBtn.hidden      = _tourStep === 0;
   nextBtn.textContent = isLast ? "סיום ✓" : "הבא ›";
   skipBtn.hidden      = isLast;
