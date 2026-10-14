@@ -2649,6 +2649,16 @@ body:is(.theme-jerusalem, .theme-parchment, .theme-sage, .theme-pearl) :is(.hist
 body:is(.theme-jerusalem, .theme-parchment, .theme-sage, .theme-pearl) :is(.annual-month, .contact-link) { background: var(--theme-panel); border-color: rgba(var(--theme-rgb), .16); }
 body:is(.theme-jerusalem, .theme-parchment, .theme-sage, .theme-pearl) :is(.annual-month__name, .contact-link strong) { color: var(--theme-accent-strong); }
 
+/* היסטוריה ותצוגה שנתית בערכות הבהירות — צבעי הבסיס תוכננו לרקע כהה ונבלעו ברקע הלבן */
+body:is(.theme-light, .theme-floral, .theme-parchment, .theme-sage, .theme-pearl) :is(.history-table th, .history-empty, .haf-strip__title, .haf-strip__stats, .annual-dow-cell, .annual-legend__item) { color: var(--muted); }
+body:is(.theme-light, .theme-floral, .theme-parchment, .theme-sage, .theme-pearl) .haf-strip__lbl { color: var(--text); }
+body:is(.theme-light, .theme-floral, .theme-parchment, .theme-sage, .theme-pearl) .annual-day { color: color-mix(in srgb, var(--text) 72%, transparent); }
+body:is(.theme-light, .theme-floral, .theme-parchment, .theme-sage, .theme-pearl) .annual-day--sighting { color: #fff; }
+body:is(.theme-light, .theme-floral, .theme-parchment, .theme-sage, .theme-pearl) .annual-day--veset-month { color: #6d28d9; }
+body:is(.theme-light, .theme-floral, .theme-parchment, .theme-sage, .theme-pearl) .annual-day--veset-haflagah { color: #0f766e; }
+body.theme-light  .annual-month__name { color: #7c3aed; }
+body.theme-floral .annual-month__name { color: #9d174d; }
+
 body:is(.theme-parchment, .theme-sage, .theme-pearl) .cell__status--day   { background: rgba(190,60,96,.13); border-color: rgba(190,60,96,.34); color: #8f2949; }
 body:is(.theme-parchment, .theme-sage, .theme-pearl) .cell__status--night { background: rgba(87,70,145,.12); border-color: rgba(87,70,145,.32); color: #52408a; }
 body:is(.theme-parchment, .theme-sage, .theme-pearl) .cell__pill--veset { background: rgba(var(--theme-rgb),.11); border-color: rgba(var(--theme-rgb),.28); color: var(--theme-accent-strong); }
