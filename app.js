@@ -1021,8 +1021,10 @@ function detectApproachingFixed(entries) {
 }
 
 /**
- * בודק אם 3 הרשומות האחרונות קובעות וסת קבוע.
- * תנאים: 3 ראיות רצופות באותה עונה (יום/לילה), ואותו יום עברי לחודש / אותו הפרש.
+ * בודק אם הרשומות האחרונות קובעות וסת קבוע.
+ * וסת חודש: 3 ראיות רצופות באותו יום עברי בחודשים עוקבים.
+ * וסת הפלגה: 3 הפלגות שוות רצופות — כלומר 4 ראיות.
+ * בשני המקרים כל הראיות חייבות להיות באותה עונה (יום/לילה).
  * @param {Array} entries — מיון מחדש לישן (כל הרשומות)
  * @returns {{ type:"month", hDay:number, tod:string }
  *          |{ type:"haflagah", interval:number, tod:string }
@@ -1030,9 +1032,9 @@ function detectApproachingFixed(entries) {
  */
 function detectFixedVeset(entries) {
   if (!HDateCtor || entries.length < 3) return null;
-  const [e0, e1, e2] = entries; // e0 = חדשה ביותר
+  const [e0, e1, e2, e3] = entries; // e0 = חדשה ביותר
 
-  // כל 3 חייבות להיות באותה עונה
+  // 3 הראיות האחרונות חייבות להיות באותה עונה
   if (e0.tod !== e1.tod || e1.tod !== e2.tod) return null;
 
   try {
@@ -1049,11 +1051,15 @@ function detectFixedVeset(entries) {
       }
     }
 
-    // וסת הפלגה קבוע: אותו הפרש בין כל שתי ראיות עוקבות
-    const int01 = hd0.abs() - hd1.abs(); // חיובי: e0 מאוחרת מ-e1
-    const int12 = hd1.abs() - hd2.abs();
-    if (int01 > 0 && int01 === int12) {
-      return { type: "haflagah", interval: int01 + 1, tod: e0.tod };
+    // וסת הפלגה קבוע: 3 הפלגות שוות = 4 ראיות, כולן באותה עונה
+    if (e3 && e3.tod === e0.tod) {
+      const hd3   = new HDateCtor(e3.date);
+      const int01 = hd0.abs() - hd1.abs(); // חיובי: e0 מאוחרת מ-e1
+      const int12 = hd1.abs() - hd2.abs();
+      const int23 = hd2.abs() - hd3.abs();
+      if (int01 > 0 && int01 === int12 && int12 === int23) {
+        return { type: "haflagah", interval: int01 + 1, tod: e0.tod };
+      }
     }
   } catch {}
 
@@ -1238,7 +1244,7 @@ function computeExpectedOccurrence(fixed, baseHd, k) {
 
 /**
  * מנתח את המצב ההלכתי המלא של הוסת על סמך כל ההיסטוריה:
- *   "fixed"   — 3 הרשומות האחרונות קובעות וסת קבוע
+ *   "fixed"   — הרשומות האחרונות קובעות וסת קבוע (חודש: 3, הפלגה: 4)
  *   "changed" — וסת קבוע פעיל מהעבר, אך הראיה האחרונה שונה; טרם נעקר
  *   "none"    — אין וסת קבוע (לא נקבע / נעקר)
  *
@@ -1251,7 +1257,7 @@ function computeExpectedOccurrence(fixed, baseHd, k) {
 function getActiveVesetState(entries) {
   if (!HDateCtor) return { mode: "none" };
 
-  // בדיקה מהירה: 3 האחרונות = וסת קבוע?
+  // בדיקה מהירה: הראיות האחרונות = וסת קבוע?
   if (entries.length >= 3) {
     const quick = detectFixedVeset(entries);
     if (quick) return { mode: "fixed", fixed: quick };
@@ -1262,7 +1268,7 @@ function getActiveVesetState(entries) {
   let estBaseHd = null;
 
   for (let i = 0; i <= entries.length - 3; i++) {
-    const f = detectFixedVeset([entries[i], entries[i + 1], entries[i + 2]]);
+    const f = detectFixedVeset(entries.slice(i, i + 4)); // חודש: 3 ראיות, הפלגה: 4
     if (f) {
       estFixed  = f;
       estBaseHd = new HDateCtor(entries[i].date); // הרשומה החדשה ביותר בחלון
@@ -1327,14 +1333,18 @@ function computeMarks() {
   const day31   = state.settings?.day31Enabled;
   const fullDay = state.settings?.fullDayEnabled;
 
-  // עונת הראייה הנוכחית — קובעת לאיזו עונה חוששים בכל הוסתות
+  // עונת הראייה הנוכחית — קובעת לאיזו עונה חוששים בוסתות שנובעים ממנה.
+  // וסת קבוע נשאר בעונה שבה נקבע (ראו markFixedOccurrences).
   const vesetTod    = current.tod || "day";
-  const vesetTodLbl = vesetTod === "night" ? "לילה 🌙" : "יום ☀️";
-  const ozTodLbl    = vesetTod === "day"   ? "לילה 🌙" : "יום ☀️";
+  const todLabel    = (tod) => tod === "night" ? "לילה 🌙" : "יום ☀️";
+  const ozTodLabel  = (tod) => tod === "day"   ? "לילה 🌙" : "יום ☀️";
+  const vesetTodLbl = todLabel(vesetTod);
+  const ozTodLbl    = ozTodLabel(vesetTod);
   // יום אור זרוע: העונה שלפני העונה הראשית
   // ראתה ביום → אור זרוע = לילה שפותח את אותו תאריך (לוח מתחיל מלילה) = אותו תאריך
   // ראתה בלילה → אור זרוע = יום שלפני = תאריך קודם
-  const ozDay = (greg) => vesetTod === "night" ? prevDay(greg) : greg;
+  const ozDayFor = (tod, greg) => tod === "night" ? prevDay(greg) : greg;
+  const ozDay    = (greg) => ozDayFor(vesetTod, greg);
 
   const currHd = new HDateCtor(current.date);
 
@@ -1344,12 +1354,12 @@ function computeMarks() {
     marks[iso].push({ label, cat });
   };
 
-  /** סימון יום פרישה + לילה מוקדם (אם fullDay) + אור זרוע (אם oz) */
-  function markVesetDay(greg, label, ozLabel) {
-    const fullLabel = `${label} — ${vesetTodLbl}`;
+  /** סימון יום פרישה + לילה מוקדם (אם fullDay) + אור זרוע (אם oz). tod = עונת הוסת */
+  function markVesetDay(greg, label, ozLabel, tod = vesetTod) {
+    const fullLabel = `${label} — ${todLabel(tod)}`;
     if (fullDay) mark(isoKey(prevDay(greg)), fullLabel);
     mark(isoKey(greg), fullLabel);
-    if (oz && ozLabel) mark(isoKey(ozDay(greg)), `${ozLabel} — ${ozTodLbl}`);
+    if (oz && ozLabel) mark(isoKey(ozDayFor(tod, greg)), `${ozLabel} — ${ozTodLabel(tod)}`);
   }
 
   let sum = `רשומה אחרונה: ${hebFullGem(current.date)} — ${current.tod === "night" ? "לילה" : "יום"}`;
@@ -1363,6 +1373,7 @@ function computeMarks() {
   function markFixedOccurrences(fixed, baseHd) {
     const isMonth  = fixed.type === "month";
     const step     = isMonth ? null : fixed.interval - 1;
+    const ftod     = fixed.tod || vesetTod; // הוסת הקבוע — בעונה שבה נקבע
     for (let i = 1; i <= 3; i++) {
       let occGreg;
       if (isMonth) {
@@ -1373,9 +1384,9 @@ function computeMarks() {
       const typeName = isMonth ? "חודש" : "הפלגה";
       const lbl    = `וסת ה${typeName} הקבוע (${i}/3)`;
       const ozLbl  = oz && ozType !== "beinonit" ? `אור זרוע (${typeName} ${i}/3)` : null;
-      markVesetDay(occGreg, lbl, ozLbl);
-      sum += `\n${lbl} — ${vesetTodLbl}: ${hebFullGem(occGreg)}`;
-      if (oz && ozLbl) sum += `\n${ozLbl} — ${ozTodLbl}: ${hebFullGem(ozDay(occGreg))}`;
+      markVesetDay(occGreg, lbl, ozLbl, ftod);
+      sum += `\n${lbl} — ${todLabel(ftod)}: ${hebFullGem(occGreg)}`;
+      if (oz && ozLbl) sum += `\n${ozLbl} — ${ozTodLabel(ftod)}: ${hebFullGem(ozDayFor(ftod, occGreg))}`;
     }
     // הפלגה > 30: עונה בינונית (ברירת מחדל: חומרה; ויש מקילים)
     if (!isMonth && fixed.interval > 30) {
@@ -1418,6 +1429,7 @@ function computeMarks() {
       // וסת הפלגה: חישוב לפי שיטת הפוסק
       const method        = state.settings?.fixedHaflagahMethod || "beit_yosef";
       const step          = fixed.interval - 1;
+      const ftod          = fixed.tod || vesetTod; // הוסת הקבוע — בעונה שבה נקבע
       const lastMissedGreg = computeExpectedOccurrence(fixed, confirmedBaseHd, missedCount);
       const lastMissedHd   = lastMissedGreg ? new HDateCtor(lastMissedGreg) : null;
 
@@ -1430,9 +1442,9 @@ function computeMarks() {
           const occGreg = lastMissedHd.add(step * i, "d").greg();
           const lbl     = `ב״י — הפלגה קבועה (${i}/3)`;
           const ozLbl   = oz && ozType !== "beinonit" ? `אור זרוע (ב״י ${i}/3)` : null;
-          markVesetDay(occGreg, lbl, ozLbl);
-          sum += `\n  ${lbl} — ${vesetTodLbl}: ${hebFullGem(occGreg)}`;
-          if (oz && ozLbl) sum += `\n  ${ozLbl} — ${ozTodLbl}: ${hebFullGem(ozDay(occGreg))}`;
+          markVesetDay(occGreg, lbl, ozLbl, ftod);
+          sum += `\n  ${lbl} — ${todLabel(ftod)}: ${hebFullGem(occGreg)}`;
+          if (oz && ozLbl) sum += `\n  ${ozLbl} — ${ozTodLabel(ftod)}: ${hebFullGem(ozDayFor(ftod, occGreg))}`;
         }
       }
 
@@ -1443,9 +1455,9 @@ function computeMarks() {
           const occGreg = currHd.add(step * i, "d").greg();
           const lbl     = `רש״ל — הפלגה קבועה (${i}/3)`;
           const ozLbl   = oz && ozType !== "beinonit" ? `אור זרוע (רש״ל ${i}/3)` : null;
-          markVesetDay(occGreg, lbl, ozLbl);
-          sum += `\n  ${lbl} — ${vesetTodLbl}: ${hebFullGem(occGreg)}`;
-          if (oz && ozLbl) sum += `\n  ${ozLbl} — ${ozTodLbl}: ${hebFullGem(ozDay(occGreg))}`;
+          markVesetDay(occGreg, lbl, ozLbl, ftod);
+          sum += `\n  ${lbl} — ${todLabel(ftod)}: ${hebFullGem(occGreg)}`;
+          if (oz && ozLbl) sum += `\n  ${ozLbl} — ${ozTodLabel(ftod)}: ${hebFullGem(ozDayFor(ftod, occGreg))}`;
         }
       }
     }
