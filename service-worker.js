@@ -1,7 +1,9 @@
 /* טהרת אסתר - וסתות | (C) 2026 yhg | כל הזכויות שמורות | ראה קובץ LICENSE */
-const CACHE = "monthly-calendar-v18";
+const CACHE = "monthly-calendar-v19";
 const APP_SHELL = [
   "./", "./index.html", "./style.css", "./app.js", "./manifest.json",
+  "./madrich.html", "./faq.html", "./privacy.html",
+  "./icon.svg", "./icon-192.png",
   "./תמונות/lilac-gold.webp", "./תמונות/rose-ivory.webp",
   "./תמונות/sage-cream.webp", "./תמונות/turquoise-pearl.webp",
 ];
@@ -36,24 +38,32 @@ self.addEventListener("fetch", (event) => {
   try { isSameOrigin = new URL(request.url).origin === self.location.origin; } catch {}
 
   if (isSameOrigin) {
-    // Cache-first: טוען מהמכשיר מיד, מרענן cache ברקע
-    const cacheMatch = caches.match(request);
+    // Cache-first: טוען מהמכשיר מיד, מרענן cache ברקע.
+    // waitUntil נקרא מיד (לא מתוך then מאוחר) כדי שהרענון יושלם גם כשהתשובה הגיעה מהמטמון.
+    let cachePut = Promise.resolve();
+    const networkFetch = fetch(request).then((res) => {
+      if (res && res.ok) {
+        const copy = res.clone();
+        cachePut = caches.open(CACHE).then((c) => c.put(request, copy));
+      }
+      return res;
+    });
+    event.waitUntil(networkFetch.then(() => cachePut).catch(() => {}));
     event.respondWith(
-      cacheMatch.then((cached) => {
-        const networkFetch = fetch(request).then((res) => {
-          event.waitUntil(caches.open(CACHE).then((c) => c.put(request, res.clone())));
-          return res;
-        }).catch(() => Response.error());
-        return cached || networkFetch;
-      })
+      caches.match(request)
+        .then((cached) => cached || networkFetch)
+        .catch(() => Response.error())
     );
   } else {
-    // Cache-first לספריות CDN
+    // Cache-first לספריות CDN. תגובות opaque (תגית script בלי CORS) תקינות ונשמרות.
     event.respondWith(
       caches.match(request).then((cached) => {
         if (cached) return cached;
         return fetch(request).then((res) => {
-          caches.open(CACHE).then((c) => c.put(request, res.clone()));
+          if (res && (res.ok || res.type === "opaque")) {
+            const copy = res.clone();
+            caches.open(CACHE).then((c) => c.put(request, copy));
+          }
           return res;
         }).catch(() => Response.error());
       })

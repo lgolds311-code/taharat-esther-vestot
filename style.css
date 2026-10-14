@@ -1396,6 +1396,33 @@ input[type="time"] {
   box-shadow: 0 0 0 3px var(--focus);
 }
 .input--textarea::placeholder { color: var(--muted); opacity: 0.7; }
+
+/* שדות טקסט / מספר / שעה בהגדרות ובצור קשר — באותו סגנון כמו .input--textarea */
+.input--text,
+.input--number {
+  height: 38px;
+  padding: 0 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(217, 70, 239, 0.22);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text);
+  font-size: 14px;
+  font-family: inherit;
+  box-sizing: border-box;
+  max-width: 100%;
+  flex-shrink: 0;
+  transition: border-color 120ms ease, background 120ms ease;
+}
+.input--number { width: 76px; text-align: center; }
+.input--text:focus,
+.input--number:focus {
+  outline: none;
+  border-color: rgba(217, 70, 239, 0.55);
+  background: rgba(217, 70, 239, 0.06);
+  box-shadow: 0 0 0 3px var(--focus);
+}
+.input--text::placeholder,
+.input--number::placeholder { color: var(--muted); opacity: 0.7; }
 .btn--full { width: 100%; justify-content: center; }
 .contact-status {
   padding: 8px 12px;
@@ -1841,8 +1868,8 @@ body.theme-light .modal__tabs { border-bottom-color: rgba(147,51,234,.14); }
 body.theme-light .tab-btn[aria-selected="true"] { color: #7c3aed; border-bottom-color: rgba(109,40,217,.7); background: rgba(109,40,217,.06); }
 body.theme-light .tab-btn:hover:not([aria-selected="true"]) { color: var(--text); background: rgba(109,40,217,.04); }
 body.theme-light .setting-group-label { color: rgba(109,40,217,.55); }
-body.theme-light .input--textarea { border-color: rgba(124,58,237,.25); background: rgba(124,58,237,.05); color: var(--text); }
-body.theme-light .input--textarea:focus { border-color: #7c3aed; background: rgba(124,58,237,.1); }
+body.theme-light :is(.input--textarea, .input--text, .input--number) { border-color: rgba(124,58,237,.25); background: rgba(124,58,237,.05); color: var(--text); }
+body.theme-light :is(.input--textarea, .input--text, .input--number):focus { border-color: #7c3aed; background: rgba(124,58,237,.1); }
 body.theme-light .setting-name { color: var(--text); }
 body.theme-light .badge-soon { background: rgba(109,40,217,.1); border-color: rgba(109,40,217,.25); color: #7c3aed; }
 body.theme-light .cell__approaching-badge { background: rgba(234,88,12,.1); border-color: rgba(234,88,12,.35); color: #c2410c; }
@@ -1951,8 +1978,8 @@ body.theme-floral .modal__tabs { border-bottom-color: rgba(190,24,93,.14); }
 body.theme-floral .tab-btn[aria-selected="true"] { color: #9d174d; border-bottom-color: rgba(190,24,93,.7); background: rgba(190,24,93,.06); }
 body.theme-floral .tab-btn:hover:not([aria-selected="true"]) { color: var(--text); background: rgba(190,24,93,.04); }
 body.theme-floral .setting-group-label { color: rgba(157,23,77,.55); }
-body.theme-floral .input--textarea { border-color: rgba(190,24,93,.25); background: rgba(190,24,93,.05); color: var(--text); }
-body.theme-floral .input--textarea:focus { border-color: #9d174d; background: rgba(190,24,93,.1); }
+body.theme-floral :is(.input--textarea, .input--text, .input--number) { border-color: rgba(190,24,93,.25); background: rgba(190,24,93,.05); color: var(--text); }
+body.theme-floral :is(.input--textarea, .input--text, .input--number):focus { border-color: #9d174d; background: rgba(190,24,93,.1); }
 body.theme-floral .setting-name { color: var(--text); }
 body.theme-floral .badge-soon { background: rgba(157,23,77,.1); border-color: rgba(157,23,77,.25); color: #9d174d; }
 body.theme-floral .cell__approaching-badge { background: rgba(234,88,12,.1); border-color: rgba(234,88,12,.35); color: #c2410c; }
@@ -2595,13 +2622,13 @@ body:is(.theme-jerusalem, .theme-parchment, .theme-sage, .theme-pearl) :is(.popo
 
 body:is(.theme-jerusalem, .theme-parchment, .theme-sage, .theme-pearl) :is(.popover__feelings-label, .tour-tooltip__title) { color: var(--theme-accent-strong); }
 
-body:is(.theme-jerusalem, .theme-parchment, .theme-sage, .theme-pearl) :is(.popover__feelings-input, .input--textarea) {
+body:is(.theme-jerusalem, .theme-parchment, .theme-sage, .theme-pearl) :is(.popover__feelings-input, .input--textarea, .input--text, .input--number) {
   border-color: rgba(var(--theme-rgb), .25);
   background: rgba(var(--theme-rgb), .055);
   color: var(--text);
 }
 
-body:is(.theme-jerusalem, .theme-parchment, .theme-sage, .theme-pearl) :is(.popover__feelings-input, .input--textarea):focus {
+body:is(.theme-jerusalem, .theme-parchment, .theme-sage, .theme-pearl) :is(.popover__feelings-input, .input--textarea, .input--text, .input--number):focus {
   border-color: var(--theme-accent);
   background: rgba(var(--theme-rgb), .09);
 }

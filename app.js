@@ -341,27 +341,9 @@ function renderLocationStatus(name) {
   if (els.locationStatus) els.locationStatus.textContent = name || "לא הוגדר";
 }
 
-/** מוצא את העיר הקרובה ביותר מתוך הרשימה המוגדרת */
-function nearestCityName(lat, lng) {
-  let best = PRESET_CITIES[0], bestDist = Infinity;
-  for (const c of PRESET_CITIES) {
-    const d = Math.hypot(c.lat - lat, c.lng - lng);
-    if (d < bestDist) { bestDist = d; best = c; }
-  }
-  return best.name;
-}
-
-/** Reverse geocoding דרך Nominatim (fallback: עיר קרובה מהרשימה) */
-async function resolveLocationName(lat, lng) {
-  try {
-    const r = await fetch(
-      `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&accept-language=he`,
-      { headers: { "Accept-Language": "he" } }
-    );
-    const j = await r.json();
-    return j?.address?.city || j?.address?.town || j?.address?.village || null;
-  } catch { return null; }
-}
+// שם תצוגה למיקום שזוהה ב-GPS. הקואורדינטות נשארות במכשיר בלבד —
+// אין שליחה לשרת חיצוני לצורך זיהוי שם העיר (כמובטח במדיניות הפרטיות).
+const GPS_LOCATION_NAME = "המיקום שלי (GPS)";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Storage helpers
@@ -2316,7 +2298,7 @@ function clearAll() {
 
 // ── גיבוי ושחזור ──
 els.exportBackup?.addEventListener("click", () => {
-  const backup = { entries: state.entries, settings: state.settings };
+  const backup = { entries: state.entries, settings: state.settings, location: loadLocation() };
   downloadText("taharat-esther-backup.json", JSON.stringify(backup, null, 2), "application/json");
 });
 
@@ -2334,6 +2316,8 @@ els.importBackupFile?.addEventListener("change", (e) => {
       if (!data || typeof data !== "object") throw new Error("פורמט לא תקין");
       if (data.entries)  { state.entries  = data.entries;  saveJson(STORAGE.entries, state.entries); }
       if (data.settings) { state.settings = { ...loadSettings(), ...data.settings }; saveSettings(state.settings); }
+      const loc = data.location;
+      if (loc && Number.isFinite(loc.lat) && Number.isFinite(loc.lng)) saveLocation(loc.lat, loc.lng, loc.name || GPS_LOCATION_NAME);
       state.settings.theme = applyTheme(state.settings.theme || "light");
       renderMonth();
       alert("הנתונים שוחזרו בהצלחה.");
@@ -2390,11 +2374,8 @@ if (els.locateBtn) {
     els.locateBtn.disabled    = true;
     els.locateBtn.textContent = "⌛ מאתר…";
     navigator.geolocation.getCurrentPosition(
-      async ({ coords: { latitude: lat, longitude: lng } }) => {
-        // ניסיון reverse geocoding, fallback לעיר קרובה
-        let name = await resolveLocationName(lat, lng);
-        if (!name) name = nearestCityName(lat, lng);
-        saveLocation(lat, lng, name);
+      ({ coords: { latitude: lat, longitude: lng } }) => {
+        saveLocation(lat, lng, GPS_LOCATION_NAME);
         if (els.citySelect) els.citySelect.value = "";
         els.locateBtn.disabled    = false;
         els.locateBtn.textContent = "📍 זהה מיקום";
