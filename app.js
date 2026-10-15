@@ -2027,6 +2027,27 @@ function buildCell({ date, muted, today, marks }) {
     cell.appendChild(checks);
   }
 
+  // תצוגה מחולקת: המשבצת בנויה משני חצאים אמיתיים, כך שכל כיתוב יושב בצבע של העונה שלו —
+  // למעלה: התאריך + וסתות הלילה (וראייה בלילה); למטה: וסתות היום וכל השאר
+  if (splitView()) {
+    const half = (tod) => {
+      const h = document.createElement("div");
+      h.className = `cell__half cell__half--${tod}`;
+      return h;
+    };
+    const nightHalf = half("night"), dayHalf = half("day");
+    const dateRow = document.createElement("div");
+    dateRow.className = "cell__date";
+    dateRow.append(numEl, gregEl);
+    nightHalf.appendChild(dateRow);
+    for (const child of [...cell.children]) {
+      if (child.classList.contains("cell__approaching-badge")) continue; // נשאר צף מעל המשבצת
+      const toNight = child.classList.contains("cell__onah--night") || child.classList.contains("cell__status--night");
+      (toNight ? nightHalf : dayHalf).appendChild(child);
+    }
+    cell.prepend(nightHalf, dayHalf);
+  }
+
   cell.addEventListener("click", (e) => {
     e.stopPropagation();
     state.selectedIso = key;

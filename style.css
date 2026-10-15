@@ -296,10 +296,31 @@ a.iconbtn {
   --split-day:          rgba(245, 158, 11, 0.24);
   --split-day-strong:   rgba(217, 119, 6, 0.55);
 }
-/* מזהה (#grid) — כדי לגבור על רקעי המשבצות של ערכות העיצוב */
+/* המשבצת בנויה משני חצאים שווים; כל חצי צבוע לפי העונה שלו (--n / --d נקבעים ב-JS) */
 #grid.grid--split .cell {
-  background-image: linear-gradient(to bottom, var(--n, transparent) 0 50%, var(--d, transparent) 50% 100%);
+  padding: 0;
+  gap: 0;
 }
+.cell__half {
+  flex: 1 1 0;
+  width: 100%;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 4px 3px;
+}
+.cell__half--night { background: var(--n, transparent); }
+.cell__half--day   { background: var(--d, transparent); justify-content: center; }
+.cell__date {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 4px;
+}
+.cell__half .cell__onah--day,
+.cell__half .cell__status { margin-top: 0; }
 .cell__onah {
   font-size: 9px;
   font-weight: 700;
