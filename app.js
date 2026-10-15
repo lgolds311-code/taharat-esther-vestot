@@ -3349,18 +3349,21 @@ state.settings.theme = applyTheme(state.settings.theme || "light");
 })();
 
 if ("serviceWorker" in navigator) {
+  /** הצגת פס "גרסה חדשה זמינה" — לחיצה מפעילה את הגרסה הממתינה (ואז הדף נטען מחדש) */
+  const showUpdateBanner = (waitingSW) => {
+    const banner = document.getElementById("update-banner");
+    const btn    = document.getElementById("update-btn");
+    if (banner) banner.hidden = false;
+    if (btn) btn.onclick = () => waitingSW.postMessage("skipWaiting");
+  };
   navigator.serviceWorker.register("./service-worker.js").then((reg) => {
+    // גרסה שכבר הותקנה בעבר ועדיין ממתינה — בלי זה הפס הופיע רק ברגע ההתקנה,
+    // ואחרי רענון הגרסה הישנה המשיכה לרוץ בלי שום סימן
+    if (reg.waiting && navigator.serviceWorker.controller) showUpdateBanner(reg.waiting);
     reg.addEventListener("updatefound", () => {
       const newSW = reg.installing;
       newSW.addEventListener("statechange", () => {
-        if (newSW.state === "installed" && navigator.serviceWorker.controller) {
-          const banner = document.getElementById("update-banner");
-          const btn    = document.getElementById("update-btn");
-          if (banner) banner.hidden = false;
-          if (btn) btn.addEventListener("click", () => {
-            newSW.postMessage("skipWaiting");
-          });
-        }
+        if (newSW.state === "installed" && navigator.serviceWorker.controller) showUpdateBanner(newSW);
       });
     });
   }).catch(() => {});

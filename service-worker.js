@@ -1,5 +1,5 @@
 /* טהרת אסתר - וסתות | (C) 2026 yhg | כל הזכויות שמורות | ראה קובץ LICENSE */
-const CACHE = "monthly-calendar-v23";
+const CACHE = "monthly-calendar-v24";
 const APP_SHELL = [
   "./", "./index.html", "./style.css", "./app.js", "./manifest.json",
   "./madrich.html", "./faq.html", "./privacy.html",
@@ -9,8 +9,10 @@ const APP_SHELL = [
 ];
 
 self.addEventListener("install", (event) => {
+  // cache: "reload" — עוקף את מטמון ה-HTTP (GitHub Pages שומר 10 דקות), כדי שגרסה חדשה
+  // לא תותקן עם עותקים ישנים של הקבצים
   event.waitUntil(
-    caches.open(CACHE).then((c) => c.addAll(APP_SHELL))
+    caches.open(CACHE).then((c) => c.addAll(APP_SHELL.map((u) => new Request(u, { cache: "reload" }))))
   );
 });
 
@@ -40,8 +42,9 @@ self.addEventListener("fetch", (event) => {
   if (isSameOrigin) {
     // Cache-first: טוען מהמכשיר מיד, מרענן cache ברקע.
     // waitUntil נקרא מיד (לא מתוך then מאוחר) כדי שהרענון יושלם גם כשהתשובה הגיעה מהמטמון.
+    // cache: "no-cache" — בדיקה מול השרת (ETag) במקום עותק HTTP ישן, כדי שהרענון ברקע יביא את העדכני
     let cachePut = Promise.resolve();
-    const networkFetch = fetch(request).then((res) => {
+    const networkFetch = fetch(request.url, { cache: "no-cache", credentials: "same-origin" }).then((res) => {
       if (res && res.ok) {
         const copy = res.clone();
         cachePut = caches.open(CACHE).then((c) => c.put(request, copy));
