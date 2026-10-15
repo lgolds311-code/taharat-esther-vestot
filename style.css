@@ -673,6 +673,15 @@ a.iconbtn {
   font-weight: 600;
 }
 
+/* הסבר: "לילה" = הלילה שלפני היום (שקיעה של היום הלועזי הקודם) */
+.popover__night-hint {
+  margin-top: 4px;
+  font-size: 12px;
+  line-height: 1.45;
+  opacity: 0.75;
+  white-space: normal;
+}
+
 .popover__feelings-label {
   display: flex;
   flex-direction: column;

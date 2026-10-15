@@ -261,9 +261,26 @@ function addHebMonths(hYear, hMonth, delta) {
 function todayHebDate() {
   if (!HDateCtor) return null;
   try {
-    const hd = new HDateCtor(new Date());
+    const hd = new HDateCtor(halachicToday());
     return { year: hd.getFullYear(), month: hd.getMonth() };
   } catch { return null; }
+}
+
+/**
+ * "היום" ההלכתי כתאריך לועזי של משבצת בלוח. משבצת = תאריך עברי שמתחיל
+ * בלילה שלפניו, ולכן אחרי השקיעה "היום" הוא כבר המשבצת של מחר.
+ */
+function halachicToday() {
+  const now   = new Date();
+  const today = startOfDay(now);
+  try {
+    const loc = loadLocation();
+    const sun = getSunTimes(now, loc.lat, loc.lng);
+    if (sun && now > sun.sunset) {
+      return new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
+    }
+  } catch {}
+  return today;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -354,6 +371,8 @@ function loadJson(key, fallback) {
 }
 function saveJson(key, value) {
   localStorage.setItem(key, JSON.stringify(value));
+  // שינוי ברשומות משנה את מועדי הפרישה — מעדכנים את ההתראות המתוזמנות
+  if (key === STORAGE.entries) refreshNotificationsSoon();
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -518,8 +537,22 @@ function startRepeatSound(type, id, title) {
 document.addEventListener("visibilitychange", () => { if (document.hidden) stopRepeatSound(); });
 window.addEventListener("beforeunload", stopRepeatSound);
 
-/** בדיקת התראות יומית — מופעלת פעם אחת בעליית האפליקציה */
+// טיימרים של התראות מתוזמנות — מבוטלים בכל הרצה מחדש (למשל אחרי מחיקת ראייה)
+let notifTimers = [];
+let notifRefreshPending = false;
+
+/** הרצה מחדש של ההתראות אחרי שינוי ברשומות (מקובץ — פעם אחת לכל סבב שינויים) */
+function refreshNotificationsSoon() {
+  if (notifRefreshPending) return;
+  notifRefreshPending = true;
+  setTimeout(() => { notifRefreshPending = false; checkDailyNotifications(); }, 0);
+}
+
+/** בדיקת התראות יומית — בעליית האפליקציה, אחרי שינויים, ומחדש בכל חצות */
 function checkDailyNotifications() {
+  notifTimers.forEach(clearTimeout);
+  notifTimers = [];
+
   // בדפדפנים שלא תומכים ב-Notifications — יציאה שקטה
   if (!("Notification" in window)) return;
   if (!state.settings?.notificationsEnabled) return;
@@ -527,6 +560,10 @@ function checkDailyNotifications() {
 
   const now      = new Date();
   const todayKey = isoKey(now);
+
+  // הרצה מחדש אחרי חצות — אם האפליקציה נשארת פתוחה, היום החדש מקבל את התזכורות שלו
+  const nextMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 1);
+  notifTimers.push(setTimeout(checkDailyNotifications, nextMidnight - now));
 
   // טעינת רשומת "מה נשלח היום" — { "YYYY-MM-DD": ["id1","id2",...] }
   let sentLog = {};
@@ -570,63 +607,70 @@ function checkDailyNotifications() {
     if (delay <= 0) {
       send(id, title, body);
     } else {
-      setTimeout(() => {
+      notifTimers.push(setTimeout(() => {
         // בדיקה מחדש מ-localStorage — מונע כפילות אם checkDailyNotifications נקראה פעמיים
         try {
           const freshLog = JSON.parse(localStorage.getItem(STORAGE.lastNotification) || "{}");
           if ((freshLog[todayKey] || []).includes(id)) return;
         } catch {}
         send(id, title, body);
-      }, delay);
+      }, delay));
     }
   };
 
-  // ── תזכורות וסת (רק אם יש marks ווסת להיום) ──
+  // ── תזכורות וסת ──
+  // משבצת בלוח = תאריך עברי שמתחיל בלילה שלפניו. לכן ביום לועזי "היום":
+  //   עונת יום של משבצת היום   — מהזריחה עד השקיעה היום (פתיחה + בדיקה)
+  //   עונת לילה של משבצת מחר  — מתחילה היום בשקיעה (פתיחה)
+  //   עונת לילה של משבצת היום — התחילה אתמול בשקיעה, נגמרת בזריחה היום (בדיקה)
   const { marks } = computeMarks();
-  const todayMarks = (marks[todayKey] || []).filter(m => m.cat === "veset");
-  if (todayMarks.length) {
-    const startMin   = state.settings.reminderStartMin ?? 0;
-    const endMin     = state.settings.reminderEndMin   ?? 30;
-    const fixedTime1 = state.settings.notif1FixedTime || state.settings.reminderFixedTime || "";
-    const fixedTime2 = state.settings.notif2FixedTime || "";
-    const label1     = state.settings.notif1Name || "תחילת עונת פרישה";
-    const label2     = state.settings.notif2Name || "זמן לבדיקה";
-    const marksStr   = todayMarks.map(m => m.label).join(", ");
+  const VESET_CATS = new Set(["veset", "veset-rare", "veset-pills"]);
+  const vesetMarks = (key, tod) => (marks[key] || []).filter(m => VESET_CATS.has(m.cat) && m.tod === tod);
+  const tomorrowKey  = isoKey(new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1));
+  const dayToday     = vesetMarks(todayKey, "day");
+  const nightToday   = vesetMarks(todayKey, "night");
+  const nightTonight = vesetMarks(tomorrowKey, "night");
 
-    // ── תזכורת ראשונה: פתיחת עונה ──
-    if (fixedTime1) {
-      const [hh, mm] = fixedTime1.split(":").map(Number);
-      const t = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hh, mm);
-      scheduleAt(t, `fixed1-${fixedTime1}`, label1, marksStr);
-    } else {
-      scheduleAt(
-        new Date(sunrise.getTime() - startMin * 60_000),
-        "sr-start", label1,
-        `זריחה בשעה ${formatILTime(sunrise)} — ${marksStr}`
-      );
-      scheduleAt(
-        new Date(sunset.getTime() - startMin * 60_000),
-        "ss-start", label1,
-        `שקיעה בשעה ${formatILTime(sunset)} — ${marksStr}`
-      );
+  const startMin   = state.settings.reminderStartMin ?? 0;
+  const endMin     = state.settings.reminderEndMin   ?? 30;
+  const fixedTime1 = state.settings.notif1FixedTime || state.settings.reminderFixedTime || "";
+  const fixedTime2 = state.settings.notif2FixedTime || "";
+  const label1     = state.settings.notif1Name || "תחילת עונת פרישה";
+  const label2     = state.settings.notif2Name || "זמן לבדיקה";
+  const names      = (list) => list.map(m => m.label).join(", ");
+  const before     = (base, min) => new Date(base.getTime() - min * 60_000);
+  const atFixed    = (hhmm) => {
+    const [hh, mm] = hhmm.split(":").map(Number);
+    return new Date(now.getFullYear(), now.getMonth(), now.getDate(), hh, mm);
+  };
+
+  // ── תזכורת ראשונה: פתיחת עונה ──
+  if (fixedTime1) {
+    const opening = [...dayToday, ...nightTonight];
+    if (opening.length) scheduleAt(atFixed(fixedTime1), `fixed1-${fixedTime1}`, label1, names(opening));
+  } else {
+    if (dayToday.length) {
+      scheduleAt(before(sunrise, startMin), "day-start", label1,
+        `זריחה בשעה ${formatILTime(sunrise)} — ${names(dayToday)}`);
     }
+    if (nightTonight.length) {
+      scheduleAt(before(sunset, startMin), "night-start", label1,
+        `שקיעה בשעה ${formatILTime(sunset)} — ${names(nightTonight)}`);
+    }
+  }
 
-    // ── תזכורת שנייה: זמן לבדיקה ──
-    if (fixedTime2) {
-      const [hh, mm] = fixedTime2.split(":").map(Number);
-      const t = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hh, mm);
-      scheduleAt(t, `fixed2-${fixedTime2}`, label2, marksStr);
-    } else {
-      scheduleAt(
-        new Date(sunrise.getTime() - endMin * 60_000),
-        "sr-end", label2,
-        `עוד ${endMin} דק׳ עד הזריחה — ${marksStr}`
-      );
-      scheduleAt(
-        new Date(sunset.getTime() - endMin * 60_000),
-        "ss-end", label2,
-        `עוד ${endMin} דק׳ עד השקיעה — ${marksStr}`
-      );
+  // ── תזכורת שנייה: זמן לבדיקה לפני סוף העונה ──
+  if (fixedTime2) {
+    const ending = [...nightToday, ...dayToday];
+    if (ending.length) scheduleAt(atFixed(fixedTime2), `fixed2-${fixedTime2}`, label2, names(ending));
+  } else {
+    if (nightToday.length) {
+      scheduleAt(before(sunrise, endMin), "night-check", label2,
+        `עוד ${endMin} דק׳ עד הזריחה — ${names(nightToday)}`);
+    }
+    if (dayToday.length) {
+      scheduleAt(before(sunset, endMin), "day-check", label2,
+        `עוד ${endMin} דק׳ עד השקיעה — ${names(dayToday)}`);
     }
   }
 
@@ -1341,18 +1385,24 @@ function computeMarks() {
   const currHd = new HDateCtor(current.date);
 
   const marks = {};
-  const mark = (iso, label, cat = "veset") => {
+  // tod = עונת הפרישה של הסימון ("day" / "night") — משמש את ההתראות
+  const mark = (iso, label, cat = "veset", tod = null) => {
     if (!marks[iso]) marks[iso] = [];
-    marks[iso].push({ label, cat });
+    marks[iso].push({ label, cat, tod });
   };
+  const otherTod = (tod) => tod === "night" ? "day" : "night";
 
-  /** סימון יום פרישה + לילה מוקדם (אם fullDay) + אור זרוע (אם oz). tod = עונת הוסת */
-  function markVesetDay(greg, label, ozLabel, tod = vesetTod) {
-    const fullLabel = `${label} — ${todLabel(tod)}`;
-    if (fullDay) mark(isoKey(prevDay(greg)), fullLabel);
-    mark(isoKey(greg), fullLabel);
-    if (oz && ozLabel) mark(isoKey(ozDayFor(tod, greg)), `${ozLabel} — ${ozTodLabel(tod)}`);
+  /**
+   * סימון יום פרישה + אור זרוע (אם oz). tod = עונת הוסת.
+   * isBeinonit: "עונה בינונית כיממה שלמה" (fullDay) — חלה רק על עונה בינונית,
+   * ומוסיפה את העונה המשלימה של אותו תאריך עברי (לילה + יום באותה משבצת).
+   */
+  function markVesetDay(greg, label, ozLabel, tod = vesetTod, isBeinonit = false) {
+    mark(isoKey(greg), `${label} — ${todLabel(tod)}`, "veset", tod);
+    if (fullDay && isBeinonit) mark(isoKey(greg), `${label} — ${todLabel(otherTod(tod))}`, "veset", otherTod(tod));
+    if (oz && ozLabel) mark(isoKey(ozDayFor(tod, greg)), `${ozLabel} — ${ozTodLabel(tod)}`, "veset", otherTod(tod));
   }
+  const fullDaySuffix = (tod = vesetTod) => fullDay ? ` (+ ${todLabel(otherTod(tod))} באותו תאריך — יממה שלמה)` : "";
 
   let sum = `רשומה אחרונה: ${hebFullGem(current.date)} — ${current.tod === "night" ? "לילה" : "יום"}`;
 
@@ -1384,8 +1434,8 @@ function computeMarks() {
     if (!isMonth && fixed.interval > 30) {
       const rule1   = new HDateCtor(entries[0].date).add(29, "d");
       const ozBLbl  = oz ? "אור זרוע (בינונית)" : null;
-      markVesetDay(rule1.greg(), "עונה בינונית", ozBLbl);
-      sum += `\nעונה בינונית — ${vesetTodLbl}: ${hebFullGem(rule1.greg())} (הפלגה מעל ל׳)`;
+      markVesetDay(rule1.greg(), "עונה בינונית", ozBLbl, vesetTod, true);
+      sum += `\nעונה בינונית — ${vesetTodLbl}: ${hebFullGem(rule1.greg())} (הפלגה מעל ל׳)${fullDaySuffix()}`;
       if (oz && ozBLbl) sum += `\n${ozBLbl} — ${ozTodLbl}: ${hebFullGem(ozDay(rule1.greg()))}`;
     }
   }
@@ -1486,12 +1536,12 @@ function computeMarks() {
     const rule2 = monthVesetForOffset(currHd, 1);
 
     // ── עונה בינונית ──
-    markVesetDay(rule1.greg(), "עונה בינונית", oz ? "אור זרוע (בינונית)" : null);
+    markVesetDay(rule1.greg(), "עונה בינונית", oz ? "אור זרוע (בינונית)" : null, vesetTod, true);
 
     // ── חומרת יום ל״א ──
     if (day31) {
       const rule1_31 = currHd.add(30, "d");
-      markVesetDay(rule1_31.greg(), "עונה בינונית (ל״א)", oz ? "אור זרוע (ל״א)" : null);
+      markVesetDay(rule1_31.greg(), "עונה בינונית (ל״א)", oz ? "אור זרוע (ל״א)" : null, vesetTod, true);
     }
 
     // ── וסת החודש ──
@@ -1499,12 +1549,10 @@ function computeMarks() {
     markVesetDay(rule2.greg(), "וסת החודש", ozChLabel);
 
     // ── סיכום ──
-    sum += `\nעונה בינונית — ${vesetTodLbl}: ${hebFullGem(rule1.greg())}`;
-    if (fullDay) sum += ` (+ לילה מוקדם: ${hebFullGem(prevDay(rule1.greg()))})`;
+    sum += `\nעונה בינונית — ${vesetTodLbl}: ${hebFullGem(rule1.greg())}${fullDaySuffix()}`;
     if (day31) {
       const rule1_31 = currHd.add(30, "d");
-      sum += `\nחומרת יום ל״א — ${vesetTodLbl}: ${hebFullGem(rule1_31.greg())}`;
-      if (fullDay) sum += ` (+ לילה מוקדם: ${hebFullGem(prevDay(rule1_31.greg()))})`;
+      sum += `\nחומרת יום ל״א — ${vesetTodLbl}: ${hebFullGem(rule1_31.greg())}${fullDaySuffix()}`;
     }
     sum += `\nוסת החודש — ${vesetTodLbl}: ${hebFullGem(rule2.greg())}`;
     if (oz) {
@@ -1542,7 +1590,6 @@ function computeMarks() {
       sum += `\nרשומה קודמת: ${hebFullGem(previous.date)} — ${previous.tod === "night" ? "לילה" : "יום"}`;
       if (showRule3) {
         sum += `\nוסת ההפלגה: ${interval} ימים → ${hebFullGem(rule3.greg())} — ${vesetTodLbl}`;
-        if (fullDay) sum += ` (+ לילה מוקדם: ${hebFullGem(prevDay(rule3.greg()))})`;
         if (oz && ozHfLbl) sum += `\nאור זרוע (הפלגה) — ${ozTodLbl}: ${hebFullGem(ozDay(rule3.greg()))}`;
       }
 
@@ -1570,7 +1617,6 @@ function computeMarks() {
           const oldRule = currHd.add(oldInterval - 1, "d");
           markVesetDay(oldRule.greg(), `וסת ההפלגה (${oldInterval} ימים — לא נעקר)`, ozHfLbl);
           sum += `\nוסת ההפלגה (${oldInterval} ימים, לא נעקר): ${hebFullGem(oldRule.greg())} — ${vesetTodLbl}`;
-          if (fullDay) sum += ` (+ לילה מוקדם: ${hebFullGem(prevDay(oldRule.greg()))})`;
           if (oz && ozHfLbl) sum += `\nאור זרוע (הפלגה — לא נעקר) — ${ozTodLbl}: ${hebFullGem(ozDay(oldRule.greg()))}`;
         }
       }
@@ -1599,8 +1645,8 @@ function computeMarks() {
         const prevBIso = isoKey(prevB.greg());
         if (prevBIso > current.iso && prevBIso <= currentSightingEnd) {
           const nextB = prevB.add(29, "d");
-          markVesetDay(nextB.greg(), "עונה בינונית (לא נעקרה — המשך ראייה)", oz ? "אור זרוע (בינונית)" : null);
-          sum += `\nעונה בינונית (לא נעקרה — המשך ראייה) — ${vesetTodLbl}: ${hebFullGem(nextB.greg())}`;
+          markVesetDay(nextB.greg(), "עונה בינונית (לא נעקרה — המשך ראייה)", oz ? "אור זרוע (בינונית)" : null, vesetTod, true);
+          sum += `\nעונה בינונית (לא נעקרה — המשך ראייה) — ${vesetTodLbl}: ${hebFullGem(nextB.greg())}${fullDaySuffix()}`;
         }
       } catch {}
       // בדיקת וסת הפלגה של הרשומה הקודמת
@@ -1678,8 +1724,7 @@ function computeMarks() {
       try {
         const nextGreg = nh.greg();
         const rLabel = `⁓ ${lbl} — ${vesetTodLbl}`;
-        mark(isoKey(nextGreg), rLabel, "veset-rare");
-        if (fullDay) mark(isoKey(prevDay(nextGreg)), rLabel, "veset-rare");
+        mark(isoKey(nextGreg), rLabel, "veset-rare", vesetTod);
         if (!addedToSum) {
           sum += `\n\n◈ ${lbl} — ${vesetTodLbl}: ${hebFullGem(nextGreg)}`;
           addedToSum = true;
@@ -1695,7 +1740,7 @@ function computeMarks() {
   // ══════════════════════════════════════════════════════════════
   if (state.settings.pillsEnabled) {
     const interval = parseInt(state.settings.pillsInterval) || 0;
-    const todLabel = state.settings.pillsTod === "night" ? "לילה 🌙" : "יום ☀️";
+    const pillsTod = state.settings.pillsTod === "night" ? "night" : "day";
     const today    = startOfDay(new Date());
     for (const [iso, rec] of Object.entries(state.entries || {})) {
       if (!rec?.pillStop) continue;
@@ -1705,8 +1750,8 @@ function computeMarks() {
       if (interval <= 0) continue;
       // ספירה כוללת: יום ההפסקה הוא יום 1, לכן מוסיפים (interval − 1)
       const concernDate = new Date(stopD.getFullYear(), stopD.getMonth(), stopD.getDate() + interval - 1);
-      const lbl = `פרישה מגלולות — ${todLabel}`;
-      mark(isoKey(concernDate), lbl, "veset-pills");
+      const lbl = `פרישה מגלולות — ${todLabel(pillsTod)}`;
+      mark(isoKey(concernDate), lbl, "veset-pills", pillsTod);
       if (concernDate >= today) {
         sum += `\n\n◉ פרישה בגלל הפסקת גלולות:\n${lbl}: ${hebFullGem(concernDate)}`;
       }
@@ -1784,7 +1829,7 @@ function renderMonth() {
     ? `נבחר: ${hebFullGem(parseIsoKey(state.selectedIso) || firstGreg)}`
     : "לחצו על יום כדי לבחור.";
 
-  const today = startOfDay(new Date());
+  const today = halachicToday(); // אחרי השקיעה — משבצת המחר
   const { marks, summary } = computeMarks();
   els.calcSummary.textContent = summary;
 
@@ -2128,11 +2173,18 @@ function buildCell({ date, muted, today, marks }) {
       const srStr = formatILTime(sun?.sunrise);
       const ssStr = formatILTime(sun?.sunset);
 
-      // קביעת ברירת מחדל חכמה
+      // ברירת מחדל לפי השעה עכשיו (זמני השמש של היום, לא של התאריך שנלחץ)
       const now    = new Date();
-      const isDay  = sun
-        ? (now >= sun.sunrise && now <= sun.sunset)
+      const sunNow = getSunTimes(now, loc.lat, loc.lng);
+      const isDay  = sunNow
+        ? (now >= sunNow.sunrise && now <= sunNow.sunset)
         : (now.getHours() >= 6 && now.getHours() < 19);
+
+      // הסבר: "לילה" במשבצת = הלילה שלפני היום, שמתחיל בשקיעה של היום הלועזי הקודם
+      const eve       = prevDay(date);
+      const eveSun    = getSunTimes(eve, loc.lat, loc.lng);
+      const nightHint = `🌙 לילה = הלילה שלפני היום הזה — מהשקיעה ביום ${DOW_LABELS[eve.getDay()]} ${eve.getDate()}.${eve.getMonth() + 1}` +
+        (eveSun?.sunset ? ` (${formatILTime(eveSun.sunset)})` : "") + ".";
 
       const dayClass   = isDay ? "btn btn--primary" : "btn";
       const nightClass = isDay ? "btn"               : "btn btn--primary";
@@ -2162,7 +2214,7 @@ function buildCell({ date, muted, today, marks }) {
       const newEndSightingHTML = buildEndSightingHTML(date);
       openPopover({
         title,
-        bodyHTML: `<div class="popover__times">☀️ זריחה: ${srStr}&nbsp;&nbsp;&nbsp;🌇 שקיעה: ${ssStr}</div><label class="popover__feelings-label">הרגשות גוף (אופציונלי)<textarea class="popover__feelings-input" placeholder="למשל: כאב ראש, עייפות, כאבי בטן..."></textarea></label>${copyBtnHtml}${newEndSightingHTML}<div class="popover__question">איך לסמן?</div>${extraHTML}${pillsHTML}`,
+        bodyHTML: `<div class="popover__times">☀️ זריחה: ${srStr}&nbsp;&nbsp;&nbsp;🌇 שקיעה: ${ssStr}</div><label class="popover__feelings-label">הרגשות גוף (אופציונלי)<textarea class="popover__feelings-input" placeholder="למשל: כאב ראש, עייפות, כאבי בטן..."></textarea></label>${copyBtnHtml}${newEndSightingHTML}<div class="popover__question">איך לסמן?</div><div class="popover__night-hint">${nightHint}</div>${extraHTML}${pillsHTML}`,
         actions: [
           {
             label: "יום ☀️", className: dayClass,
