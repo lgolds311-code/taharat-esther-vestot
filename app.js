@@ -1830,9 +1830,6 @@ function renderMonth() {
     : "לחצו על יום כדי לבחור.";
 
   const today = halachicToday(); // אחרי השקיעה — משבצת המחר
-  els.grid.classList.toggle("grid--split", splitView());
-  const splitLegend = document.getElementById("split-legend");
-  if (splitLegend) splitLegend.hidden = !splitView();
   const { marks, summary } = computeMarks();
   els.calcSummary.textContent = summary;
 
@@ -1881,17 +1878,9 @@ function emptyCell() {
   return d;
 }
 
-// ── תצוגה מחולקת (תצוגה מקדימה): חצי עליון של המשבצת = לילה, חצי תחתון = יום ──
-// הפעלה במכשיר: ?split=1 · כיבוי: ?split=0. משתמשות שלא הפעילו — לא מושפעות.
-const SPLIT_KEY = "monthlyCalendar.splitPreview.v1";
-try {
-  const splitParam = new URLSearchParams(location.search).get("split");
-  if (splitParam === "1") localStorage.setItem(SPLIT_KEY, "1");
-  if (splitParam === "0") localStorage.removeItem(SPLIT_KEY);
-} catch {}
-function splitView() {
-  try { return localStorage.getItem(SPLIT_KEY) === "1"; } catch { return false; }
-}
+// ── משבצת מחולקת: חצי עליון = לילה, חצי תחתון = יום ──
+// (ניקוי דגל התצוגה המקדימה ?split=1 שנשמר במכשירים שניסו אותה)
+try { localStorage.removeItem("monthlyCalendar.splitPreview.v1"); } catch {}
 
 const VESET_MARK_CATS = new Set(["veset", "veset-rare", "veset-pills"]);
 
@@ -1966,26 +1955,20 @@ function buildCell({ date, muted, today, marks }) {
     cell.appendChild(badge);
   }
 
-  if (splitView()) {
-    // חצי עליון = לילה, חצי תחתון = יום; צבע חזק = ראייה, צבע עדין = עונת פרישה
-    const onah = (tod) => cellMarks.filter(m => VESET_MARK_CATS.has(m.cat) && m.tod === tod);
-    const nightV = onah("night"), dayV = onah("day");
-    if (status === "night")  cell.style.setProperty("--n", "var(--split-night-strong)");
-    else if (nightV.length)  cell.style.setProperty("--n", "var(--split-night)");
-    if (status === "day")    cell.style.setProperty("--d", "var(--split-day-strong)");
-    else if (dayV.length)    cell.style.setProperty("--d", "var(--split-day)");
-    for (const [list, tod] of [[nightV, "night"], [dayV, "day"]]) {
-      if (!list.length) continue;
-      const row = document.createElement("div");
-      row.className   = `cell__onah cell__onah--${tod}`;
-      row.textContent = [...new Set(list.map(shortVesetLabel))].join(" · ");
-      row.title       = list.map(m => m.label).join("\n");
-      cell.appendChild(row);
-    }
-  } else {
-    addPill("veset",          "cell__pill--veset");
-    addPill("veset-rare",     "cell__pill--veset-rare");
-    addPill("veset-pills",    "cell__pill--veset-pills");
+  // חצי עליון = לילה, חצי תחתון = יום; צבע חזק = ראייה, צבע עדין = עונת פרישה
+  const onah = (tod) => cellMarks.filter(m => VESET_MARK_CATS.has(m.cat) && m.tod === tod);
+  const nightV = onah("night"), dayV = onah("day");
+  if (status === "night")  cell.style.setProperty("--n", "var(--split-night-strong)");
+  else if (nightV.length)  cell.style.setProperty("--n", "var(--split-night)");
+  if (status === "day")    cell.style.setProperty("--d", "var(--split-day-strong)");
+  else if (dayV.length)    cell.style.setProperty("--d", "var(--split-day)");
+  for (const [list, tod] of [[nightV, "night"], [dayV, "day"]]) {
+    if (!list.length) continue;
+    const row = document.createElement("div");
+    row.className   = `cell__onah cell__onah--${tod}`;
+    row.textContent = [...new Set(list.map(shortVesetLabel))].join(" · ");
+    row.title       = list.map(m => m.label).join("\n");
+    cell.appendChild(row);
   }
   addPill("pill-stop",      "cell__pill--pill-stop");
   addPill("hefsek-eligible","cell__pill--hefsek-eligible");
@@ -2027,26 +2010,24 @@ function buildCell({ date, muted, today, marks }) {
     cell.appendChild(checks);
   }
 
-  // תצוגה מחולקת: המשבצת בנויה משני חצאים אמיתיים, כך שכל כיתוב יושב בצבע של העונה שלו —
+  // המשבצת בנויה משני חצאים אמיתיים, כך שכל כיתוב יושב בצבע של העונה שלו —
   // למעלה: התאריך + וסתות הלילה (וראייה בלילה); למטה: וסתות היום וכל השאר
-  if (splitView()) {
-    const half = (tod) => {
-      const h = document.createElement("div");
-      h.className = `cell__half cell__half--${tod}`;
-      return h;
-    };
-    const nightHalf = half("night"), dayHalf = half("day");
-    const dateRow = document.createElement("div");
-    dateRow.className = "cell__date";
-    dateRow.append(numEl, gregEl);
-    nightHalf.appendChild(dateRow);
-    for (const child of [...cell.children]) {
-      if (child.classList.contains("cell__approaching-badge")) continue; // נשאר צף מעל המשבצת
-      const toNight = child.classList.contains("cell__onah--night") || child.classList.contains("cell__status--night");
-      (toNight ? nightHalf : dayHalf).appendChild(child);
-    }
-    cell.prepend(nightHalf, dayHalf);
+  const half = (tod) => {
+    const h = document.createElement("div");
+    h.className = `cell__half cell__half--${tod}`;
+    return h;
+  };
+  const nightHalf = half("night"), dayHalf = half("day");
+  const dateRow = document.createElement("div");
+  dateRow.className = "cell__date";
+  dateRow.append(numEl, gregEl);
+  nightHalf.appendChild(dateRow);
+  for (const child of [...cell.children]) {
+    if (child.classList.contains("cell__approaching-badge")) continue; // נשאר צף מעל המשבצת
+    const toNight = child.classList.contains("cell__onah--night") || child.classList.contains("cell__status--night");
+    (toNight ? nightHalf : dayHalf).appendChild(child);
   }
+  cell.prepend(nightHalf, dayHalf);
 
   cell.addEventListener("click", (e) => {
     e.stopPropagation();
