@@ -1,5 +1,5 @@
 /* טהרת אסתר - וסתות | (C) 2026 yhg | כל הזכויות שמורות | ראה קובץ LICENSE */
-const CACHE = "monthly-calendar-v21";
+const CACHE = "monthly-calendar-v22";
 const APP_SHELL = [
   "./", "./index.html", "./style.css", "./app.js", "./manifest.json",
   "./madrich.html", "./faq.html", "./privacy.html",

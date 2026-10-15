@@ -638,6 +638,13 @@ function checkDailyNotifications() {
   const label1     = state.settings.notif1Name || "תחילת עונת פרישה";
   const label2     = state.settings.notif2Name || "זמן לבדיקה";
   const names      = (list) => list.map(m => m.label).join(", ");
+  // שעת "בדיקת בוקר" (הגדרות → תזכורות): שעה קבועה גוברת על דקות אחרי הזריחה.
+  // משמשת לשבעה נקיים וגם לבדיקה שבסוף עונת לילה — רוב הנשים קמות אחרי הזריחה ובודקות כשהן קמות.
+  function morningCheckTime() {
+    const morningFixed = state.settings.hefsekMorningTime || "";
+    if (morningFixed) return atFixed(morningFixed);
+    return new Date(sunrise.getTime() + (state.settings.hefsekMorningMin ?? 0) * 60_000);
+  }
   const before     = (base, min) => new Date(base.getTime() - min * 60_000);
   const atFixed    = (hhmm) => {
     const [hh, mm] = hhmm.split(":").map(Number);
@@ -665,8 +672,9 @@ function checkDailyNotifications() {
     if (ending.length) scheduleAt(atFixed(fixedTime2), `fixed2-${fixedTime2}`, label2, names(ending));
   } else {
     if (nightToday.length) {
-      scheduleAt(before(sunrise, endMin), "night-check", label2,
-        `עוד ${endMin} דק׳ עד הזריחה — ${names(nightToday)}`);
+      // סוף עונת לילה — בדיקה כשקמים בבוקר (שעת "בדיקת בוקר"), לא לפני הזריחה
+      scheduleAt(morningCheckTime(), "night-check", label2,
+        `בוקר טוב — בדיקה לסיום עונת הלילה: ${names(nightToday)}`);
     }
     if (dayToday.length) {
       scheduleAt(before(sunset, endMin), "day-check", label2,
@@ -698,15 +706,7 @@ function checkDailyNotifications() {
   // ── תזכורות שבעה נקיים ──
   const nekiimDay = isShivaNekiimDay(todayKey);
   if (nekiimDay) {
-    // בדיקת בוקר — שעה קבועה גוברת על דקות אחרי זריחה
-    let morningT;
-    const morningFixed = state.settings.hefsekMorningTime || "";
-    if (morningFixed) {
-      const [hh, mm] = morningFixed.split(":").map(Number);
-      morningT = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hh, mm);
-    } else {
-      morningT = new Date(sunrise.getTime() + (state.settings.hefsekMorningMin ?? 0) * 60_000);
-    }
+    const morningT = morningCheckTime();
     scheduleAt(morningT, `nekiim-morning-${todayKey}`, `בדיקת בוקר (יום ${nekiimDay})`, "בוקר טוב, לא לשכוח בדיקת בוקר של שבעה נקיים");
 
     // בדיקת ערב — שעה קבועה גוברת על דקות לפני שקיעה
@@ -1830,6 +1830,9 @@ function renderMonth() {
     : "לחצו על יום כדי לבחור.";
 
   const today = halachicToday(); // אחרי השקיעה — משבצת המחר
+  els.grid.classList.toggle("grid--split", splitView());
+  const splitLegend = document.getElementById("split-legend");
+  if (splitLegend) splitLegend.hidden = !splitView();
   const { marks, summary } = computeMarks();
   els.calcSummary.textContent = summary;
 
@@ -1876,6 +1879,42 @@ function emptyCell() {
   const d = document.createElement("div");
   d.className = "cell cell--muted";
   return d;
+}
+
+// ── תצוגה מחולקת (תצוגה מקדימה): חצי עליון של המשבצת = לילה, חצי תחתון = יום ──
+// הפעלה במכשיר: ?split=1 · כיבוי: ?split=0. משתמשות שלא הפעילו — לא מושפעות.
+const SPLIT_KEY = "monthlyCalendar.splitPreview.v1";
+try {
+  const splitParam = new URLSearchParams(location.search).get("split");
+  if (splitParam === "1") localStorage.setItem(SPLIT_KEY, "1");
+  if (splitParam === "0") localStorage.removeItem(SPLIT_KEY);
+} catch {}
+function splitView() {
+  try { return localStorage.getItem(SPLIT_KEY) === "1"; } catch { return false; }
+}
+
+const VESET_MARK_CATS = new Set(["veset", "veset-rare", "veset-pills"]);
+
+/** שם קצר לסימון וסת בתוך משבצת (העונה מוצגת בצבע, ולכן בלי "— יום/לילה") */
+function shortVesetLabel(m) {
+  const l = m.label.replace(/\s+—\s+(יום ☀️|לילה 🌙)\s*$/, "");
+  if (m.cat === "veset-pills") return "גלולות";
+  if (m.cat === "veset-rare") {
+    if (l.includes("דילוג")) return "דילוג";
+    if (l.includes("סירוג")) return "סירוג";
+    return "וסת שבועי";
+  }
+  if (l.startsWith("אור זרוע"))         return "אור זרוע";
+  if (l.startsWith("ב״י"))              return "ב״י";
+  if (l.startsWith("רש״ל"))             return "רש״ל";
+  if (l.startsWith("וסת החודש הקבוע"))  return "חודש קבוע";
+  if (l.startsWith("וסת ההפלגה הקבוע")) return "הפלגה קבועה";
+  if (l.startsWith("וסת החודש"))        return "חודש";
+  if (l.startsWith("עונה בינונית (ל״א)")) return "ל״א";
+  if (l.startsWith("עונה בינונית"))     return "בינונית";
+  const haf = l.match(/^וסת (?:ה)?הפלגה \((\d+)/);
+  if (haf) return `הפלגה ${haf[1]}`;
+  return l;
 }
 
 function buildCell({ date, muted, today, marks }) {
@@ -1927,9 +1966,27 @@ function buildCell({ date, muted, today, marks }) {
     cell.appendChild(badge);
   }
 
-  addPill("veset",          "cell__pill--veset");
-  addPill("veset-rare",     "cell__pill--veset-rare");
-  addPill("veset-pills",    "cell__pill--veset-pills");
+  if (splitView()) {
+    // חצי עליון = לילה, חצי תחתון = יום; צבע חזק = ראייה, צבע עדין = עונת פרישה
+    const onah = (tod) => cellMarks.filter(m => VESET_MARK_CATS.has(m.cat) && m.tod === tod);
+    const nightV = onah("night"), dayV = onah("day");
+    if (status === "night")  cell.style.setProperty("--n", "var(--split-night-strong)");
+    else if (nightV.length)  cell.style.setProperty("--n", "var(--split-night)");
+    if (status === "day")    cell.style.setProperty("--d", "var(--split-day-strong)");
+    else if (dayV.length)    cell.style.setProperty("--d", "var(--split-day)");
+    for (const [list, tod] of [[nightV, "night"], [dayV, "day"]]) {
+      if (!list.length) continue;
+      const row = document.createElement("div");
+      row.className   = `cell__onah cell__onah--${tod}`;
+      row.textContent = [...new Set(list.map(shortVesetLabel))].join(" · ");
+      row.title       = list.map(m => m.label).join("\n");
+      cell.appendChild(row);
+    }
+  } else {
+    addPill("veset",          "cell__pill--veset");
+    addPill("veset-rare",     "cell__pill--veset-rare");
+    addPill("veset-pills",    "cell__pill--veset-pills");
+  }
   addPill("pill-stop",      "cell__pill--pill-stop");
   addPill("hefsek-eligible","cell__pill--hefsek-eligible");
   addPill("hefsek",         "cell__pill--hefsek");
