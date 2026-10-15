@@ -637,12 +637,7 @@ function checkDailyNotifications() {
     const targetDate = getCurrentHefsekTargetDate(lastVest.iso);
     const vestDate   = parseIsoKey(lastVest.iso);
     if (targetDate && sameYmd(now, targetDate)) {
-      const hasValidHefsek = Object.entries(state.entries || {}).some(([iso, rec]) => {
-        if (rec?.hefsek !== "ok") return false;
-        const d = parseIsoKey(iso);
-        return d && vestDate && d > vestDate;
-      });
-      if (!hasValidHefsek) {
+      if (!hasValidHefsekAfter(vestDate)) {
         const fixedT = state.settings.hefsekReminderTime || "";
         let hefsekT;
         if (fixedT) {
@@ -822,27 +817,30 @@ function getHefsekEligibleDate(vestIsoKey) {
 /**
  * מחשב את היום המדויק לביצוע הפסק טהרה:
  * מתחיל מיום הכשירות הראשון, ודוחה קדימה יום אחד לכל הפסק שנכשל.
+ * בדיקה פסולה בשבעה נקיים שוברת את הספירה — הפסק חדש אפשרי מאותו יום
+ * (כמו הכפתור "בצע הפסק טהרה היום" בחלונית הבדיקה).
  */
 function getCurrentHefsekTargetDate(lastVestIso) {
   const eligible = getHefsekEligibleDate(lastVestIso);
   if (!eligible) return null;
   const vestDate = parseIsoKey(lastVestIso);
 
-  // איסוף כל ההפסקים שנכשלו אחרי יום הכשירות, מממוין לפי תאריך
-  const failedDates = Object.entries(state.entries || {})
-    .filter(([iso, rec]) => {
-      if (rec?.hefsek !== "fail") return false;
-      const d = parseIsoKey(iso);
-      return d && vestDate && d > vestDate && d >= eligible;
-    })
-    .map(([iso]) => parseIsoKey(iso))
-    .sort((a, b) => a - b);
+  // איסוף הפסקים שנכשלו ובדיקות שנכשלו אחרי יום הכשירות, ממוין לפי תאריך
+  const failures = [];
+  for (const [iso, rec] of Object.entries(state.entries || {})) {
+    const d = parseIsoKey(iso);
+    if (!d || !vestDate || d <= vestDate || d < eligible) continue;
+    if (rec?.hefsek === "fail") {
+      failures.push({ d, next: new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1) });
+    } else if (rec?.checkMorning === "fail" || rec?.checkEvening === "fail") {
+      failures.push({ d, next: d });
+    }
+  }
+  failures.sort((a, b) => a.d - b.d);
 
   let target = eligible;
-  for (const fd of failedDates) {
-    if (fd >= target) {
-      target = new Date(fd.getFullYear(), fd.getMonth(), fd.getDate() + 1);
-    }
+  for (const { d, next } of failures) {
+    if (d >= target) target = next;
   }
   return target;
 }
@@ -884,6 +882,18 @@ function getShivaNekiimRange() {
   const start = new Date(hefsekDate.getFullYear(), hefsekDate.getMonth(), hefsekDate.getDate() + 1);
   const end   = new Date(hefsekDate.getFullYear(), hefsekDate.getMonth(), hefsekDate.getDate() + 7);
   return { start, end, hefsekIso: hefsekEntry.iso };
+}
+
+/**
+ * האם יש הפסק טהרה תקין אחרי הוסת האחרון, שהספירה שאחריו לא נשברה
+ * (בדיקה פסולה בשבעה נקיים מחייבת הפסק חדש).
+ * @param {Date} vestDate — תאריך הוסת האחרון
+ */
+function hasValidHefsekAfter(vestDate) {
+  const range = getShivaNekiimRange(); // null = אין הפסק תקין, או שהספירה נשברה
+  if (!range || !vestDate) return false;
+  const hefsekDate = parseIsoKey(range.hefsekIso);
+  return !!hefsekDate && hefsekDate > vestDate;
 }
 
 /**
@@ -1710,13 +1720,8 @@ function computeMarks() {
   // ── יום הפסק טהרה המדויק (נדחה אם היה כישלון) ──
   const hefsekTargetDate = getCurrentHefsekTargetDate(current.iso);
   const vestDateH        = parseIsoKey(current.iso);
-  if (hefsekTargetDate && vestDateH) {
-    const hasValidHefsek = Object.entries(state.entries || {}).some(([iso, rec]) => {
-      if (rec?.hefsek !== "ok") return false;
-      const d = parseIsoKey(iso);
-      return d && d > vestDateH;
-    });
-    if (!hasValidHefsek) mark(isoKey(hefsekTargetDate), "זמן הפסק טהרה", "hefsek-eligible");
+  if (hefsekTargetDate && vestDateH && !hasValidHefsekAfter(vestDateH)) {
+    mark(isoKey(hefsekTargetDate), "זמן הפסק טהרה", "hefsek-eligible");
   }
 
   // ── הפסק טהרה ──
@@ -1960,12 +1965,7 @@ function buildCell({ date, muted, today, marks }) {
           const targetDate = getCurrentHefsekTargetDate(lastVest.iso);
           const vestDate   = parseIsoKey(lastVest.iso);
           if (targetDate && date >= targetDate) {
-            const hasValidHefsek = Object.entries(state.entries || {}).some(([iso, r]) => {
-              if (r?.hefsek !== "ok") return false;
-              const d = parseIsoKey(iso);
-              return d && vestDate && d > vestDate;
-            });
-            if (!hasValidHefsek) {
+            if (!hasValidHefsekAfter(vestDate)) {
               extraHTML = `<div class="popover__hefsek-section"><div class="popover__check-row"><span class="popover__check-label">הפסק טהרה</span><button type="button" class="popover__check-btn popover__check-btn--ok" data-hefsek="ok">✓ תקין</button><button type="button" class="popover__check-btn popover__check-btn--fail" data-hefsek="fail">✗ לא תקין</button></div></div>`;
             }
           }
@@ -2104,7 +2104,11 @@ function buildCell({ date, muted, today, marks }) {
           {
             label: "בטל סימון", className: "btn btn--danger",
             onClick: () => {
-              delete state.entries[key];
+              // מחיקת שדות הראייה בלבד — שומר סימונים אחרים באותו יום (כגון הפסקת גלולות)
+              const rec = { ...state.entries[key] };
+              delete rec.tod; delete rec.feelings; delete rec.sightingEnd; delete rec.updatedAt;
+              if (Object.keys(rec).length) state.entries[key] = { ...rec, updatedAt: Date.now() };
+              else delete state.entries[key];
               saveJson(STORAGE.entries, state.entries);
               renderMonth();
             },
@@ -2141,6 +2145,20 @@ function buildCell({ date, muted, today, marks }) {
         ? `<button type="button" class="btn btn--ghost btn--small popover__copy-prev">העתק הרגשות מהוסת הקודמת</button>`
         : "";
 
+      // רישום ראייה — ממזג לרשומה הקיימת (שומר למשל הפסקת גלולות או בדיקות).
+      // הפסק טהרה באותו יום מתבטל: ראייה סותרת אותו.
+      const saveSighting = (tod) => {
+        const feelings    = els.popoverBody.querySelector(".popover__feelings-input")?.value?.trim() || "";
+        const sightingEnd = readEndFromPopover();
+        const rec = { ...state.entries[key], tod, updatedAt: Date.now() };
+        delete rec.hefsek;
+        if (feelings) rec.feelings = feelings; else delete rec.feelings;
+        if (sightingEnd) rec.sightingEnd = sightingEnd; else delete rec.sightingEnd;
+        state.entries[key] = rec;
+        saveJson(STORAGE.entries, state.entries);
+        renderMonth();
+      };
+
       const newEndSightingHTML = buildEndSightingHTML(date);
       openPopover({
         title,
@@ -2148,23 +2166,11 @@ function buildCell({ date, muted, today, marks }) {
         actions: [
           {
             label: "יום ☀️", className: dayClass,
-            onClick: () => {
-              const feelings    = els.popoverBody.querySelector(".popover__feelings-input")?.value?.trim() || "";
-              const sightingEnd = readEndFromPopover();
-              state.entries[key] = { tod: "day", updatedAt: Date.now(), ...(feelings && { feelings }), ...(sightingEnd && { sightingEnd }) };
-              saveJson(STORAGE.entries, state.entries);
-              renderMonth();
-            },
+            onClick: () => saveSighting("day"),
           },
           {
             label: "לילה 🌙", className: nightClass,
-            onClick: () => {
-              const feelings    = els.popoverBody.querySelector(".popover__feelings-input")?.value?.trim() || "";
-              const sightingEnd = readEndFromPopover();
-              state.entries[key] = { tod: "night", updatedAt: Date.now(), ...(feelings && { feelings }), ...(sightingEnd && { sightingEnd }) };
-              saveJson(STORAGE.entries, state.entries);
-              renderMonth();
-            },
+            onClick: () => saveSighting("night"),
           },
           {
             label: "ביטול", className: "btn btn--ghost",
@@ -2319,6 +2325,7 @@ els.importBackupFile?.addEventListener("change", (e) => {
       const loc = data.location;
       if (loc && Number.isFinite(loc.lat) && Number.isFinite(loc.lng)) saveLocation(loc.lat, loc.lng, loc.name || GPS_LOCATION_NAME);
       state.settings.theme = applyTheme(state.settings.theme || "light");
+      syncSettingsUI();
       renderMonth();
       alert("הנתונים שוחזרו בהצלחה.");
     } catch {
@@ -2861,6 +2868,7 @@ els.notifSoundFile?.addEventListener("change", (e) => {
 els.hefsekMinDay?.addEventListener("change", (e) => {
   state.settings.hefsekMinDay = parseInt(e.target.value) || 4;
   saveSettings(state.settings);
+  renderMonth(); // "זמן הפסק טהרה" בלוח תלוי ביום המינימלי
 });
 els.hefsekReminderMin?.addEventListener("change", (e) => {
   state.settings.hefsekReminderMin = Math.max(0, parseInt(e.target.value) || 30);
@@ -3064,102 +3072,107 @@ if (savedView?.hYear && savedView?.hMonth) {
   if (t) { state.viewHYear = t.year; state.viewHMonth = t.month; }
 }
 
-// הפעל טוגלים לפי ההגדרות השמורות
-if (els.ozToggle             && state.settings.ozEnabled)             els.ozToggle.setAttribute("aria-checked",             "true");
-if (els.day31Toggle          && state.settings.day31Enabled)          els.day31Toggle.setAttribute("aria-checked",          "true");
-if (els.fullDayToggle        && state.settings.fullDayEnabled)        els.fullDayToggle.setAttribute("aria-checked",        "true");
-if (els.multiHaflagahToggle  && state.settings.multiHaflagahEnabled)  els.multiHaflagahToggle.setAttribute("aria-checked",  "true");
-if (els.sightingEndToggle    && state.settings.sightingEndEnabled)    els.sightingEndToggle.setAttribute("aria-checked",    "true");
-if (els.weekdayVesetToggle   && state.settings.weekdayVesetEnabled)   els.weekdayVesetToggle.setAttribute("aria-checked",   "true");
+/**
+ * סנכרון כל פקדי חלון ההגדרות לפי state.settings והמיקום השמור.
+ * נקרא בעליית האפליקציה ואחרי שחזור מגיבוי.
+ */
+function syncSettingsUI() {
+  // טוגלים לפי ההגדרות השמורות (גם כיבוי — חשוב אחרי שחזור גיבוי)
+  if (els.ozToggle)            els.ozToggle.setAttribute("aria-checked",            String(!!state.settings.ozEnabled));
+  if (els.day31Toggle)         els.day31Toggle.setAttribute("aria-checked",         String(!!state.settings.day31Enabled));
+  if (els.fullDayToggle)       els.fullDayToggle.setAttribute("aria-checked",       String(!!state.settings.fullDayEnabled));
+  if (els.multiHaflagahToggle) els.multiHaflagahToggle.setAttribute("aria-checked", String(!!state.settings.multiHaflagahEnabled));
+  if (els.sightingEndToggle)   els.sightingEndToggle.setAttribute("aria-checked",   String(!!state.settings.sightingEndEnabled));
+  if (els.weekdayVesetToggle)  els.weekdayVesetToggle.setAttribute("aria-checked",  String(!!state.settings.weekdayVesetEnabled));
 
-// עמימת/הפעלת שורת טווח אור זרוע לפי מצב הטוגל
-if (els.ozScopeRow)          els.ozScopeRow.classList.toggle("setting-row--disabled", !state.settings.ozEnabled);
-if (els.ozTypeSelect)        els.ozTypeSelect.value = state.settings.ozType || "all";
-if (els.fixedHaflagahSelect) els.fixedHaflagahSelect.value = state.settings.fixedHaflagahMethod || "beit_yosef";
+  // עמימת/הפעלת שורת טווח אור זרוע לפי מצב הטוגל
+  if (els.ozScopeRow)          els.ozScopeRow.classList.toggle("setting-row--disabled", !state.settings.ozEnabled);
+  if (els.ozTypeSelect)        els.ozTypeSelect.value = state.settings.ozType || "all";
+  if (els.fixedHaflagahSelect) els.fixedHaflagahSelect.value = state.settings.fixedHaflagahMethod || "beit_yosef";
 
-// התראות — מציגים כדלוק רק אם גם ההגדרה וגם ההרשאה קיימות
-const _notifActive = state.settings.notificationsEnabled
-    && "Notification" in window && Notification.permission === "granted";
-if (els.notificationsToggle && _notifActive) {
-  els.notificationsToggle.setAttribute("aria-checked", "true");
-} else if (state.settings.notificationsEnabled) {
-  // ההגדרה דלוקה אך ההרשאה בוטלה בדפדפן — מכבים אוטומטית
-  state.settings.notificationsEnabled = false;
-  saveSettings(state.settings);
-}
-// עמימת/הפעלת קבוצת הגדרות התראות
-if (els.notifSub) els.notifSub.classList.toggle("settings-group--dimmed", !_notifActive);
-if (els.notif1Name)     els.notif1Name.value      = state.settings.notif1Name    || "";
-if (els.notif1Min)      els.notif1Min.value       = state.settings.reminderStartMin ?? 0;
-if (els.notif2Name)     els.notif2Name.value      = state.settings.notif2Name    || "";
-if (els.notif2Min)       els.notif2Min.value       = state.settings.reminderEndMin ?? 30;
-if (els.notif1FixedTime) els.notif1FixedTime.value = state.settings.notif1FixedTime || "";
-if (els.notif2FixedTime) els.notif2FixedTime.value = state.settings.notif2FixedTime || "";
-// צליל — סנכרון select ושורת קובץ
-if (els.notifSoundSelect) {
-  els.notifSoundSelect.value = state.settings.notifSound || "default";
-}
-if (els.notifSoundFileRow) {
-  els.notifSoundFileRow.hidden = (state.settings.notifSound !== "custom");
-}
-if (els.notifSoundFileName && state.settings.notifSound === "custom") {
-  const stored = localStorage.getItem(STORAGE.soundData);
-  els.notifSoundFileName.textContent = stored ? "קובץ נטען" : "לא נבחר קובץ";
-}
+  // התראות — מציגים כדלוק רק אם גם ההגדרה וגם ההרשאה קיימות
+  const _notifActive = state.settings.notificationsEnabled
+      && "Notification" in window && Notification.permission === "granted";
+  if (els.notificationsToggle) els.notificationsToggle.setAttribute("aria-checked", String(!!_notifActive));
+  if (!_notifActive && state.settings.notificationsEnabled) {
+    // ההגדרה דלוקה אך ההרשאה בוטלה בדפדפן — מכבים אוטומטית
+    state.settings.notificationsEnabled = false;
+    saveSettings(state.settings);
+  }
+  // עמימת/הפעלת קבוצת הגדרות התראות
+  if (els.notifSub) els.notifSub.classList.toggle("settings-group--dimmed", !_notifActive);
+  if (els.notif1Name)     els.notif1Name.value      = state.settings.notif1Name    || "";
+  if (els.notif1Min)      els.notif1Min.value       = state.settings.reminderStartMin ?? 0;
+  if (els.notif2Name)     els.notif2Name.value      = state.settings.notif2Name    || "";
+  if (els.notif2Min)       els.notif2Min.value       = state.settings.reminderEndMin ?? 30;
+  if (els.notif1FixedTime) els.notif1FixedTime.value = state.settings.notif1FixedTime || "";
+  if (els.notif2FixedTime) els.notif2FixedTime.value = state.settings.notif2FixedTime || "";
+  // צליל — סנכרון select ושורת קובץ
+  if (els.notifSoundSelect) {
+    els.notifSoundSelect.value = state.settings.notifSound || "default";
+  }
+  if (els.notifSoundFileRow) {
+    els.notifSoundFileRow.hidden = (state.settings.notifSound !== "custom");
+  }
+  if (els.notifSoundFileName && state.settings.notifSound === "custom") {
+    const stored = localStorage.getItem(STORAGE.soundData);
+    els.notifSoundFileName.textContent = stored ? "קובץ נטען" : "לא נבחר קובץ";
+  }
 
-// הפסק טהרה — סנכרון UI
-if (els.hefsekMinDay)       els.hefsekMinDay.value        = String(state.settings.hefsekMinDay ?? 4);
-if (els.hefsekReminderMin)  els.hefsekReminderMin.value   = state.settings.hefsekReminderMin ?? 30;
-if (els.hefsekReminderTime) els.hefsekReminderTime.value  = state.settings.hefsekReminderTime || "";
-if (els.hefsekMorningMin)   els.hefsekMorningMin.value    = state.settings.hefsekMorningMin ?? 0;
-if (els.hefsekMorningTime)  els.hefsekMorningTime.value   = state.settings.hefsekMorningTime || "07:00";
-if (els.hefsekEveningMin)   els.hefsekEveningMin.value    = state.settings.hefsekEveningMin ?? 30;
-if (els.hefsekEveningTime)  els.hefsekEveningTime.value   = state.settings.hefsekEveningTime || "";
-if (els.hefsekMikvehToggle) {
-  const on = state.settings.hefsekMikvehReminder !== false;
-  els.hefsekMikvehToggle.setAttribute("aria-checked", String(on));
-  if (els.hefsekMikvehTimeRow) els.hefsekMikvehTimeRow.classList.toggle("settings-group--dimmed", !on);
-}
-if (els.hefsekMikvehTime) els.hefsekMikvehTime.value = state.settings.hefsekMikvehTime || "";
+  // הפסק טהרה — סנכרון UI
+  if (els.hefsekMinDay)       els.hefsekMinDay.value        = String(state.settings.hefsekMinDay ?? 4);
+  if (els.hefsekReminderMin)  els.hefsekReminderMin.value   = state.settings.hefsekReminderMin ?? 30;
+  if (els.hefsekReminderTime) els.hefsekReminderTime.value  = state.settings.hefsekReminderTime || "";
+  if (els.hefsekMorningMin)   els.hefsekMorningMin.value    = state.settings.hefsekMorningMin ?? 0;
+  if (els.hefsekMorningTime)  els.hefsekMorningTime.value   = state.settings.hefsekMorningTime || "07:00";
+  if (els.hefsekEveningMin)   els.hefsekEveningMin.value    = state.settings.hefsekEveningMin ?? 30;
+  if (els.hefsekEveningTime)  els.hefsekEveningTime.value   = state.settings.hefsekEveningTime || "";
+  if (els.hefsekMikvehToggle) {
+    const on = state.settings.hefsekMikvehReminder !== false;
+    els.hefsekMikvehToggle.setAttribute("aria-checked", String(on));
+    if (els.hefsekMikvehTimeRow) els.hefsekMikvehTimeRow.classList.toggle("settings-group--dimmed", !on);
+  }
+  if (els.hefsekMikvehTime) els.hefsekMikvehTime.value = state.settings.hefsekMikvehTime || "";
 
-// ICS — סנכרון UI
-if (els.icsAlarm) els.icsAlarm.value = state.settings.icsAlarm || "morning";
+  // ICS — סנכרון UI
+  if (els.icsAlarm) els.icsAlarm.value = state.settings.icsAlarm || "morning";
 
-// חזרת צליל — סנכרון UI
-if (els.notifRepeatToggle) {
-  const on = !!state.settings.notifRepeat;
-  els.notifRepeatToggle.setAttribute("aria-checked", String(on));
-  if (els.notifRepeatFields) els.notifRepeatFields.classList.toggle("settings-group--dimmed", !on);
-}
-if (els.notifRepeatSec) els.notifRepeatSec.value = state.settings.notifRepeatSec   || 60;
-if (els.notifRepeatMax) els.notifRepeatMax.value = state.settings.notifRepeatMaxMin || 10;
+  // חזרת צליל — סנכרון UI
+  if (els.notifRepeatToggle) {
+    const on = !!state.settings.notifRepeat;
+    els.notifRepeatToggle.setAttribute("aria-checked", String(on));
+    if (els.notifRepeatFields) els.notifRepeatFields.classList.toggle("settings-group--dimmed", !on);
+  }
+  if (els.notifRepeatSec) els.notifRepeatSec.value = state.settings.notifRepeatSec   || 60;
+  if (els.notifRepeatMax) els.notifRepeatMax.value = state.settings.notifRepeatMaxMin || 10;
 
-// גלולות — סנכרון UI
-if (els.pillsToggle) {
-  const on = state.settings.pillsEnabled;
-  els.pillsToggle.setAttribute("aria-checked", String(on));
-  if (els.pillsFields) els.pillsFields.classList.toggle("settings-group--dimmed", !on);
-}
-if (els.pillsInterval) els.pillsInterval.value = state.settings.pillsInterval ?? 4;
-if (els.pillsTod)      els.pillsTod.value      = state.settings.pillsTod      || "day";
+  // גלולות — סנכרון UI
+  if (els.pillsToggle) {
+    const on = state.settings.pillsEnabled;
+    els.pillsToggle.setAttribute("aria-checked", String(on));
+    if (els.pillsFields) els.pillsFields.classList.toggle("settings-group--dimmed", !on);
+  }
+  if (els.pillsInterval) els.pillsInterval.value = state.settings.pillsInterval ?? 4;
+  if (els.pillsTod)      els.pillsTod.value      = state.settings.pillsTod      || "day";
 
-// החל ערכת נושא שמורה
-state.settings.theme = applyTheme(state.settings.theme || "light");
-
-// הצג סטטוס מיקום
-const initLoc = loadLocation();
-renderLocationStatus(initLoc?.name || DEFAULT_LOC.name);
-
-// סמן עיר בבחירה אם תואמת עיר מוגדרת מראש
-if (els.citySelect && initLoc) {
-  for (const opt of els.citySelect.options) {
-    if (!opt.value) continue;
-    const [la, lo] = opt.value.split(",").map(Number);
-    if (Math.abs(la - initLoc.lat) < 0.01 && Math.abs(lo - initLoc.lng) < 0.01) {
-      els.citySelect.value = opt.value; break;
+  // הצג סטטוס מיקום, וסמן עיר בבחירה אם תואמת עיר מוגדרת מראש
+  const loc = loadLocation();
+  renderLocationStatus(loc?.name || DEFAULT_LOC.name);
+  if (els.citySelect && loc) {
+    els.citySelect.value = "";
+    for (const opt of els.citySelect.options) {
+      if (!opt.value) continue;
+      const [la, lo] = opt.value.split(",").map(Number);
+      if (Math.abs(la - loc.lat) < 0.01 && Math.abs(lo - loc.lng) < 0.01) {
+        els.citySelect.value = opt.value; break;
+      }
     }
   }
 }
+syncSettingsUI();
+
+// החל ערכת נושא שמורה
+state.settings.theme = applyTheme(state.settings.theme || "light");
 
 // ── התקנה במכשיר (PWA) ──
 (function setupInstall() {
