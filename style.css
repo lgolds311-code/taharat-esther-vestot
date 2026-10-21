@@ -1425,6 +1425,24 @@ input[type="time"] {
   font-size: 18px;
   flex-shrink: 0;
 }
+.contact-link__logo {
+  flex-shrink: 0;
+  width: 84px;
+  height: 50px;
+  padding: 4px 6px;
+  border-radius: 8px;
+  background: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.contact-link__logo img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  display: block;
+}
 .contact-link strong {
   color: var(--brand);
   font-weight: 700;
